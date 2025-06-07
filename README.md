@@ -8,7 +8,7 @@
 
 > **注意**: 请将下面的体验链接和项目截图替换为您自己的地址。
 >
-> **[>> 点击这里在线体验 <<](https://your-github-username.github.io/physics-box/)**
+> **[>> 点击这里在线体验 <<](https://physics-myz93m92j-tongs-projects-3d9d2a42.vercel.app/)**
 
 ---
 
