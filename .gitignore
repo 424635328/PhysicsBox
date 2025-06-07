@@ -1,0 +1,72 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Dependencies
+# 这是一个包含了所有项目依赖的大文件夹，不应该被版本控制。
+# 任何协作者都可以通过运行 `npm install` 来重新生成它。
+/node_modules
+
+# Build output
+# 这是运行 `npm run build` 后 Vite 生成的最终产品文件夹。
+# 它应该在每次构建时重新生成，而不是被手动提交。
+!dist/
+/dist-ssr
+
+# Log files
+# 各种工具生成的日志文件，只对本地调试有用。
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / Caching
+# Vite 和其他工具生成的缓存文件，用于提高开发速度。
+.vite/
+.temp/
+*.tsbuildinfo
+vite.config.ts.timestamp-*
+.eslintcache
+
+# Local environment variables
+# 包含本地配置或敏感密钥的文件。永远不要提交它们！
+# 如果需要，可以创建一个 .env.example 文件作为模板。
+.env
+.env.local
+.env.*.local
+
+# IDE and editor directories
+# 各种代码编辑器自动生成的配置文件夹。
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Operating System generated files
+# macOS 和 Windows 系统自动生成的缩略图或元数据文件。
+.DS_Store
+Thumbs.db
