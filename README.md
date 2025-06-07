@@ -7,7 +7,7 @@
 一个功能丰富的2D物理沙盒网页应用，基于 **Matter.js** 物理引擎和 **Vite** 构建。它允许用户自由创造、测试和分享各种物理场景，探索物理学的奇妙世界。
 
 >
-> **[>> 点击这里在线体验 <<](https://physics-myz93m92j-tongs-projects-3d9d2a42.vercel.app/)**
+> **[>> 点击这里在线体验 <<](physics-box.vercel.app)**
 >
 
 ---
