@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PhysicsLab Ultra</title>
+        <title>PhysicsLab Ultra (Fixed)</title>
         <style>
     :root {
         --box-size: 700px;
@@ -253,7 +253,7 @@
             isDrawing: false, penPoints: [],
             teleporterLinkTarget: null,
 
-            CONFIG: { version: "6.0-ultra", currentTool: 'add', currentShape: 'box' },
+            CONFIG: { version: "6.1-fixed", currentTool: 'add', currentShape: 'box' },
             SETTINGS: { boxSize: 700, rotationMode: 'visual', gravityScale: 1.0, restitution: 0.1, timeScale: 1.0, friction: { box_box: 1.0, circle_circle: 1.0, box_circle: 1.0, body_wall: 1.0 }, motorSpeed: 0.2 },
             dom: {},
 
@@ -278,7 +278,7 @@
                     case 'platform': body = this.Bodies.rectangle(x, y, size * 2.5, size * 0.5, { ...bodyOptions, isStatic: true, render: { fillStyle: '#8d6e63' }}); break;
                     case 'gear': const gearParams = options.creationParams || { radius: size * 0.8, teeth: 8, toothHeight: size * 0.2 }; const gearVertices = this.createGearVertices(gearParams.radius, gearParams.teeth, gearParams.toothHeight); body = this.Bodies.fromVertices(x, y, [gearVertices], { ...bodyOptions, render: { fillStyle: '#78909c' }}, true); body.creationParams = gearParams; break;
                     case 'thruster': body = this.Bodies.trapezoid(x, y, size*0.8, size*0.8, 0.5, { ...bodyOptions, render: { fillStyle: '#607d8b', strokeStyle: '#cfd8dc', lineWidth: 2 }}); body.isThruster = true; body.isThrusterActive = false; body.thrustForce = 0.005; break;
-                    case 'attractor': body = this.Bodies.circle(x, y, size / 3, { ...bodyOptions, isStatic: true, isSensor: true, render: { fillStyle: '#7e57c2', strokeStyle: '#ede7f6', lineWidth: 4 }}); body.isAttractor = true; body.attractionRadius = size * 3; body.attractionForce = 0.0005; break;
+                    case 'attractor': body = this.Bodies.circle(x, y, size / 3, { ...bodyOptions, isStatic: true, isSensor: true, render: { fillStyle: '#7e57c2', strokeStyle: '#ede7f6', lineWidth: 4 }}); body.isAttractor = true; body.attractionRadius = size * 5; body.attractionForce = 0.0005; break;
                     case 'teleporter':
                         body = this.Bodies.circle(x, y, size / 3, { isStatic: true, isSensor: true, label: 'userBody' });
                         body.isTeleporter = true;
@@ -306,8 +306,29 @@
                 return body;
             },
             createSoftBody(params) { const { x, y, columns, rows, columnGap, rowGap } = params; const softBody = this.Composites.stack(x - (columns * 10)/2, y - (rows * 10)/2, columns, rows, columnGap, rowGap, (px, py) => this.Bodies.circle(px, py, 5, { friction: 0.1, restitution: 0.4, render: {fillStyle: '#FDD835'}, label: 'userBody' })); this.Composites.mesh(softBody, columns, rows, false, { stiffness: 0.6, render: { type: 'line', visible: true, strokeStyle: 'rgba(255,255,255,0.5)' } }); softBody.shapeType = 'soft'; softBody.label = 'userBody'; softBody.creationParams = params; return softBody; },
-            explode(bomb) { if (bomb.isExploded || !this.Composite.get(this.world, bomb.id, 'body')) return; bomb.isExploded = true; const pos = bomb.position; const radius = this.SETTINGS.boxSize / 4; this.Composite.remove(this.world, bomb); const allBodies = this.Composite.allBodies(this.world); const affectedBodies = this.Query.region(allBodies, { min: { x: pos.x - radius, y: pos.y - radius }, max: { x: pos.x + radius, y: pos.y + radius } }); affectedBodies.forEach(body => { if (body.isStatic || body.isSensor) return; if (body.parent && body.parent.shapeType === 'soft') { if (!body.parent.isBeingRemoved) { body.parent.isBeingRemoved = true; this.Composite.remove(this.world, body.parent); } } else { this.Composite.remove(this.world, body); } }); this.showToast('💥 BOOM!', 'error'); },
+            explode(bomb) { if (bomb.isExploded || !this.Composite.get(this.world, bomb.id, 'body')) return; bomb.isExploded = true; const pos = bomb.position; const radius = this.SETTINGS.boxSize / 4; this.Composite.remove(this.world, bomb); const allBodies = this.Composite.allBodies(this.world); const affectedBodies = this.Query.region(allBodies, { min: { x: pos.x - radius, y: pos.y - radius }, max: { x: pos.x + radius, y: pos.y + radius } }); affectedBodies.forEach(body => { if (body.isStatic || body.isSensor) return; if (body.parent && body.parent.shapeType === 'soft') { if (!body.parent.isBeingRemoved) { body.parent.isBeingRemoved = true; this.removeBodyAndConstraints(body.parent); } } else { this.removeBodyAndConstraints(body); } }); this.showToast('💥 BOOM!', 'error'); },
             clearAll(quiet = false) { if (!quiet && !confirm('你确定要清除画布上所有的物体吗？此操作无法撤销。')) return; this.Composite.clear(this.world, false); this.initEngine(); this.Runner.run(this.runner, this.engine); this.resize(this.SETTINGS.boxSize); this.teleporterLinkTarget = null; if (!quiet) this.showToast('已清空画布', 'info'); },
+            // *** FIX 1: NEW HELPER FUNCTION to remove a body and its associated constraints ***
+            removeBodyAndConstraints(body) {
+                if (!body || !this.Composite.get(this.world, body.id, body.type)) {
+                    return; // Do nothing if body is invalid or not in world
+                }
+            
+                // Find all constraints connected to this body (or any of its parts)
+                const allConstraints = this.Composite.allConstraints(this.world);
+                const bodyIds = (body.parts || [body]).map(p => p.id);
+
+                const constraintsToRemove = allConstraints.filter(c => 
+                    (c.bodyA && bodyIds.includes(c.bodyA.id)) || 
+                    (c.bodyB && bodyIds.includes(c.bodyB.id))
+                );
+
+                // Remove the identified constraints
+                constraintsToRemove.forEach(c => this.Composite.remove(this.world, c));
+
+                // Finally, remove the body itself
+                this.Composite.remove(this.world, body);
+            },
             cacheDOMElements() { const ids = [ 'physics-container', 'settings-panel', 'help-panel-overlay', 'help-panel', 'toast-container', 'tool-buttons', 'shape-buttons', 'challenge-select', 'challenge-description', 'win-message', 'settings-btn', 'help-btn', 'close-settings-btn', 'close-help-btn', 'save-browser-btn', 'load-browser-btn', 'share-scene-btn', 'save-file-btn', 'load-file-input', 'clear-all-btn', 'rotation-mode-select' ]; ids.forEach(id => { this.dom[id.replace(/-(\w)/g, (m, p1) => p1.toUpperCase())] = document.getElementById(id); }); const sliders = ['box-size', 'gravity', 'restitution', 'timescale', 'friction-box_box', 'friction-circle_circle', 'friction-box_circle', 'friction-body_wall']; this.dom.sliders = {}; this.dom.values = {}; sliders.forEach(s => { const id = s.replace(/-/g, '_'); this.dom.sliders[id] = document.getElementById(`${s}-slider`); this.dom.values[id] = document.getElementById(`${s}-value`); }); },
             initUI() { this.dom.toolButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.setActiveTool(e.target.dataset.tool); }}); this.dom.shapeButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.CONFIG.currentShape = e.target.dataset.shape; this.dom.shapeButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); this.teleporterLinkTarget = null; }}); this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.clearAllBtn.onclick = () => this.clearAll(); this.dom.rotationModeSelect.onchange = e => { this.SETTINGS.rotationMode = e.target.value; this.updateVisualsAndGravity(); }; this.dom.sliders.box_size.addEventListener('input', e => { this.dom.values.box_size.textContent = e.target.value; }); this.dom.sliders.box_size.addEventListener('change', e => { this.resize(parseInt(e.target.value, 10)); }); for(const key in this.dom.sliders) { if (key !== 'box_size' && this.dom.sliders[key]) { this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key)); } } this.updateUIFromConfig(); this.setActiveTool('add'); },
             setActiveTool(tool) { this.CONFIG.currentTool = tool; this.dom.toolButtons.querySelector('.active')?.classList.remove('active'); this.dom.toolButtons.querySelector(`[data-tool=${tool}]`).classList.add('active'); this.linkFirstBody = null; this.teleporterLinkTarget = null; this.isDrawing = false; this.penPoints = []; if (tool === 'add') { this.mouseConstraint.collisionFilter.mask = 0xFFFFFFFF; this.render.canvas.style.cursor = 'grab'; } else { this.mouseConstraint.collisionFilter.mask = 0x0000; this.render.canvas.style.cursor = 'crosshair'; } },
@@ -324,7 +345,27 @@
                         if (body.isStatic || body.isSensor) { if (body.teleportCooldown > 0) body.teleportCooldown--; continue; }
                         if (body.motorDirection) this.Body.setAngularVelocity(body, this.SETTINGS.motorSpeed * body.motorDirection);
                         if (body.isThruster && body.isThrusterActive) { const forceMagnitude = body.thrustForce * this.SETTINGS.timeScale; const force = { x: Math.sin(body.angle) * forceMagnitude, y: -Math.cos(body.angle) * forceMagnitude }; this.Body.applyForce(body, body.position, force); }
-                        attractors.forEach(attractor => { const vec = {x: attractor.position.x - body.position.x, y: attractor.position.y - body.position.y}; const distSq = vec.x * vec.x + vec.y * vec.y; if (distSq > 1 && distSq < attractor.attractionRadius * attractor.attractionRadius) { const forceMag = attractor.attractionForce * (body.mass / distSq); this.Body.applyForce(body, body.position, {x: vec.x * forceMag, y: vec.y * forceMag}); }});
+                        
+                        // *** FIX 2: REVISED ATTRACTOR LOGIC ***
+                        attractors.forEach(attractor => {
+                            if (body === attractor) return; // An attractor should not attract itself
+                            
+                            const vec = {x: attractor.position.x - body.position.x, y: attractor.position.y - body.position.y};
+                            const distSq = vec.x * vec.x + vec.y * vec.y;
+                            
+                            if (distSq > 1 && distSq < attractor.attractionRadius * attractor.attractionRadius) {
+                                // The original formula (dividing by distSq) caused force to diminish too quickly.
+                                // This revised formula normalizes the direction vector and applies a consistent force.
+                                const dist = Math.sqrt(distSq);
+                                const forceMagnitude = attractor.attractionForce * body.mass;
+                                const force = {
+                                    x: (vec.x / dist) * forceMagnitude,
+                                    y: (vec.y / dist) * forceMagnitude
+                                };
+                                this.Body.applyForce(body, body.position, force);
+                            }
+                        });
+
                         let inZone = false;
                         for (const zone of gravityZones) { if (this.Bounds.contains(zone.bounds, body.position)) { inZone = true; break; } }
                         if (inZone) { const antiGravity = { x: -this.engine.gravity.x * this.engine.gravity.scale * body.mass, y: -this.engine.gravity.y * this.engine.gravity.scale * body.mass }; this.Body.applyForce(body, body.position, antiGravity); const upwardForce = { x: 0, y: -0.002 * body.mass }; this.Body.applyForce(body, body.position, upwardForce); }
@@ -351,7 +392,8 @@
                     const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos);
                     switch (this.CONFIG.currentTool) {
                         case 'add': if (!body) this.createShape(mousePos.x, mousePos.y); break;
-                        case 'remove': if(body) this.Composite.remove(this.world, body); break;
+                        // *** FIX 1: Use the new helper function for removal ***
+                        case 'remove': if(body) this.removeBodyAndConstraints(body); break;
                         case 'pin': this.togglePin(body); break;
                         case 'motor': this.toggleMotor(body, 1); break;
                         case 'link': this.handleLinkTool(body); break;
@@ -380,9 +422,12 @@
                     if (this.teleporterLinkTarget) { this.Composite.remove(this.world, this.teleporterLinkTarget); this.teleporterLinkTarget = null; this.showToast('已取消传送门配对', 'info'); }
                 });
                 
-                window.addEventListener('keydown', e => { if (e.target.matches('input, select')) return; const mousePos = this.mouseConstraint.mouse.position; const bodyUnderMouse = this.getBodyAt(mousePos); let angleChange = 0; switch (e.key.toLowerCase()) { case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI / 2 : 0.05; break; case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI / 2 : 0.05); break; case 'c': e.preventDefault(); this.clearAll(); break; case 'r': e.preventDefault(); this.rotateWorld(-this.worldAngle); this.showToast('世界旋转已重置', 'info'); break; case ' ': e.preventDefault(); this.isPaused = !this.isPaused; this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; this.showToast(this.isPaused ? '已暂停' : '已继续', 'info'); break; case 'd': if (bodyUnderMouse) { e.preventDefault(); this.Composite.remove(this.world, bodyUnderMouse); this.showToast('物体已删除!', 'info'); } break; case 'p': if (this.mouseConstraint.body && !this.mouseConstraint.body.isStatic) { e.preventDefault(); this.togglePin(this.mouseConstraint.body); this.mouseConstraint.body = null; } break; case 'escape': this.dom.settingsPanel.style.display = 'none'; this.dom.helpPanelOverlay.style.display = 'none'; break; } if (angleChange) { e.preventDefault(); this.rotateWorld(angleChange); } });
+                window.addEventListener('keydown', e => { if (e.target.matches('input, select')) return; const mousePos = this.mouseConstraint.mouse.position; const bodyUnderMouse = this.getBodyAt(mousePos); let angleChange = 0; switch (e.key.toLowerCase()) { case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI / 2 : 0.05; break; case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI / 2 : 0.05); break; case 'c': e.preventDefault(); this.clearAll(); break; case 'r': e.preventDefault(); this.rotateWorld(-this.worldAngle); this.showToast('世界旋转已重置', 'info'); break; case ' ': e.preventDefault(); this.isPaused = !this.isPaused; this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; this.showToast(this.isPaused ? '已暂停' : '已继续', 'info'); break; 
+                    // *** FIX 1: Use the new helper function for removal ***
+                    case 'd': if (bodyUnderMouse) { e.preventDefault(); this.removeBodyAndConstraints(bodyUnderMouse); this.showToast('物体已删除!', 'info'); } break; 
+                    case 'p': if (this.mouseConstraint.body && !this.mouseConstraint.body.isStatic) { e.preventDefault(); this.togglePin(this.mouseConstraint.body); this.mouseConstraint.body = null; } break; case 'escape': this.dom.settingsPanel.style.display = 'none'; this.dom.helpPanelOverlay.style.display = 'none'; break; } if (angleChange) { e.preventDefault(); this.rotateWorld(angleChange); } });
             },
-            getBodyAt(position) { const bodiesUnderMouse = this.Query.point(this.Composite.allBodies(this.world), position); const userBodies = bodiesUnderMouse.filter(b => b.label === 'userBody'); if (userBodies.length === 0) return null; const softBodyParent = userBodies.find(b => b.parent && b.parent.shapeType === 'soft'); return softBodyParent ? softBodyParent.parent : userBodies.reduce((p, c) => ((c.area || 1) < (p.area || 1)) ? c : p); },
+            getBodyAt(position) { const bodiesUnderMouse = this.Query.point(this.Composite.allBodies(this.world), position); const userBodies = bodiesUnderMouse.filter(b => b.label === 'userBody' || (b.parent && b.parent.label === 'userBody')); if (userBodies.length === 0) return null; const softBodyParent = userBodies.find(b => b.parent && b.parent.shapeType === 'soft'); return softBodyParent ? softBodyParent.parent : userBodies.reduce((p, c) => ((c.area || 1) < (p.area || 1)) ? c : p); },
             handleLinkTool(body) { if(body && body.type === 'body') { if(!this.linkFirstBody) { this.linkFirstBody = body; this.showToast('已选择第一个物体，请选择第二个', 'info'); } else if(this.linkFirstBody !== body) { const c = this.Constraint.create({bodyA:this.linkFirstBody, bodyB:body, stiffness:0.1, label:'userConstraint', render: { strokeStyle: '#fff', lineWidth: 2 }}); this.Composite.add(this.world, c); this.linkFirstBody = null; } else { this.linkFirstBody = null; this.showToast('已取消连接操作', 'info'); } } },
             togglePin(body) { if (!body) return; if (body.shapeType === 'soft') { const newStaticState = !body.bodies[0].isStatic; body.bodies.forEach(p => { this.Body.setStatic(p, newStaticState); p.motorDirection = 0; }); this.showToast(`柔性体已${newStaticState ? '固定' : '取消固定'}!`, 'info'); } else if (body.type === 'body') { const newStaticState = !body.isStatic; this.Body.setStatic(body, newStaticState); if (newStaticState) body.motorDirection = 0; this.showToast(`物体已${newStaticState ? '固定' : '取消固定'}!`, 'info'); } },
             toggleMotor(body, direction) { if (body && body.type === 'body' && !body.isStatic) { body.motorDirection = (body.motorDirection === direction) ? 0 : direction; } },
