@@ -3,174 +3,237 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>终极物理实验室 4.2 (分享修复与快捷键增强)</title>
+        <title>PhysicsLab Ultra</title>
         <style>
-        :root {
-            --box-size: 700px;
-            --primary-text: #e0e0e0; --secondary-text: #b0b0b0; --background-main: #1a1a1a; --background-panel: #2c2c2c;
-            --border-color: #555; --accent-color: #03a9f4; --tool-active-color: #ffab40; --challenge-color: #4caf50;
-            --toast-success-bg: rgba(76, 175, 80, 0.9); --toast-error-bg: rgba(211, 47, 47, 0.9); --toast-info-bg: rgba(3, 169, 244, 0.9);
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh;
-            background: linear-gradient(45deg, #121212, #242424, #121212); background-size: 400% 400%; animation: gradientBG 15s ease infinite;
-            overflow: hidden; color: var(--primary-text);
-        }
-        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        
-        #main-layout { display: grid; grid-template-columns: 220px 1fr 220px; align-items: flex-start; gap: 30px; padding: 20px; width: 100%; max-width: 1400px; box-sizing: border-box; }
-        #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; }
-        #center-content { display: flex; justify-content: center; }
-        
-        #physics-container { width: var(--box-size); height: var(--box-size); border: 3px solid var(--border-color); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease, height 0.3s ease; }
-        canvas { display: block; width: 100%; height: 100%; }
+    :root {
+        --box-size: 700px;
+        --primary-text: #e0e0e0; --secondary-text: #b0b0b0; --background-main: #1a1a1a; --background-panel: #2c2c2c;
+        --border-color: #555; --accent-color: #03a9f4; --tool-active-color: #ffab40; --challenge-color: #4caf50;
+        --toast-success-bg: rgba(76, 175, 80, 0.9); --toast-error-bg: rgba(211, 47, 47, 0.9); --toast-info-bg: rgba(3, 169, 244, 0.9);
+        /* NEW: Colors for new shapes */
+        --teleporter-a-color: #9c27b0; --teleporter-b-color: #ffeb3b; --gravity-zone-color: rgba(76, 175, 80, 0.25);
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh;
+        background: linear-gradient(45deg, #121212, #242424, #121212); background-size: 400% 400%; animation: gradientBG 15s ease infinite;
+        overflow: hidden; color: var(--primary-text);
+    }
+    @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    
+    #main-layout { display: grid; grid-template-columns: 220px 1fr 220px; align-items: flex-start; gap: 30px; padding: 20px; width: 100%; max-width: 1400px; box-sizing: border-box; }
+    #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; }
+    #center-content { display: flex; justify-content: center; }
+    
+    #physics-container { width: var(--box-size); height: var(--box-size); border: 3px solid var(--border-color); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease, height 0.3s ease; }
+    canvas { display: block; width: 100%; height: 100%; }
 
-        .control-group { background: var(--background-panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
-        .control-group h3 { margin: 0 0 15px 0; text-align: center; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        #shape-buttons { grid-template-columns: repeat(3, 1fr); }
-        .grid-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        button, select { background: #424242; color: var(--primary-text); border: 2px solid var(--border-color); border-radius: 5px; padding: 10px; cursor: pointer; font-size: 14px; transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
-        button:hover, select:hover { border-color: var(--accent-color); background: #555; }
-        .grid-buttons button.active { border-color: var(--tool-active-color); background: #616161; box-shadow: 0 0 8px var(--tool-active-color); transform: scale(1.05); }
-        #app-actions-group .grid-buttons button { font-size: 16px; }
-        #challenge-description { font-size: 12px; color: var(--secondary-text); margin-top: 10px; min-height: 40px; }
-        #win-message { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; background: rgba(76, 175, 80, 0.9); color: white; border-radius: 10px; font-size: 32px; font-weight: bold; z-index: 500; }
-        #settings-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: var(--background-panel); padding: 20px; border-radius: 10px; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
-        #settings-panel h2 { margin-top: 0; color: var(--accent-color); }
-        .slider-group { margin-bottom: 15px; }
-        .slider-group label { display: block; margin-bottom: 5px; font-size: 14px; }
-        .slider-group input[type="range"] { width: 100%; }
-        #close-settings-btn, #close-help-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; background: none; border: none; color: #fff; cursor: pointer; }
-        .settings-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
-        .btn { padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; }
-        .btn-primary { background-color: var(--accent-color); color: white; }
-        .btn-danger { background-color: #d32f2f; color: white; }
-        #scene-management-buttons button, #scene-file-buttons .btn { flex-grow: 1; text-align: center; }
-        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
-        .toast { padding: 15px 20px; color: white; border-radius: 5px; font-size: 14px; opacity: 0; transform: translateX(100%); animation: slideIn 0.5s forwards; }
-        @keyframes slideOut { to { opacity: 0; transform: translateX(100%); } }
-        .toast.success { background-color: var(--toast-success-bg); } .toast.error { background-color: var(--toast-error-bg); } .toast.info { background-color: var(--toast-info-bg); }
-        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
-        #help-panel-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1500; justify-content: center; align-items: center; }
-        #help-panel { position: relative; background: var(--background-panel); padding: 20px 30px; border-radius: 10px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-        #help-panel h3 { color: var(--accent-color); } #help-panel ul { padding-left: 20px; } #help-panel li { margin-bottom: 10px; } #help-panel code { background-color: #424242; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        </style>
+    .control-group { background: var(--background-panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .control-group h3 { margin: 0 0 15px 0; text-align: center; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+    #tool-buttons, #shape-buttons { grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); }
+    .grid-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    button, select { background: #424242; color: var(--primary-text); border: 2px solid var(--border-color); border-radius: 5px; padding: 10px; cursor: pointer; font-size: 14px; transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
+    button:hover, select:hover { border-color: var(--accent-color); background: #555; }
+    .grid-buttons button.active { border-color: var(--tool-active-color); background: #616161; box-shadow: 0 0 8px var(--tool-active-color); transform: scale(1.05); }
+    #app-actions-group .grid-buttons button { font-size: 16px; }
+    #challenge-description { font-size: 12px; color: var(--secondary-text); margin-top: 10px; min-height: 40px; }
+    #win-message { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; background: rgba(76, 175, 80, 0.9); color: white; border-radius: 10px; font-size: 32px; font-weight: bold; z-index: 500; }
+    #settings-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: var(--background-panel); padding: 20px; border-radius: 10px; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
+    #settings-panel h2 { margin-top: 0; color: var(--accent-color); }
+    .slider-group { margin-bottom: 15px; }
+    .slider-group label { display: block; margin-bottom: 5px; font-size: 14px; }
+    .slider-group input[type="range"] { width: 100%; }
+    #close-settings-btn, #close-help-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; background: none; border: none; color: #fff; cursor: pointer; }
+    .settings-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
+    .btn { padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; }
+    .btn-primary { background-color: var(--accent-color); color: white; }
+    .btn-danger { background-color: #d32f2f; color: white; }
+    #scene-management-buttons button, #scene-file-buttons .btn { flex-grow: 1; text-align: center; }
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
+    .toast { padding: 15px 20px; color: white; border-radius: 5px; font-size: 14px; opacity: 0; transform: translateX(100%); animation: slideIn 0.5s forwards; }
+    @keyframes slideOut { to { opacity: 0; transform: translateX(100%); } }
+    .toast.success { background-color: var(--toast-success-bg); } .toast.error { background-color: var(--toast-error-bg); } .toast.info { background-color: var(--toast-info-bg); }
+    @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+    #help-panel-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1500; justify-content: center; align-items: center; }
+    #help-panel { position: relative; background: var(--background-panel); padding: 20px 30px; border-radius: 10px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+    #help-panel h3 { color: var(--accent-color); } #help-panel ul { padding-left: 20px; } #help-panel li { margin-bottom: 10px; } #help-panel code { background-color: #424242; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    </style>
     </head>
     <body>
         <div id="toast-container"></div>
-        <div id="main-layout"><div id="left-panel"><div
-                    class="control-group"><h3>工具 (Tool)</h3><div
-                        id="tool-buttons" class="grid-buttons"><button
-                            class="tool-btn active"
-                            data-tool="add">添加/拖拽</button><button
-                            class="tool-btn" data-tool="pin">固定</button><button
-                            class="tool-btn"
-                            data-tool="remove">移除</button><button
-                            class="tool-btn"
-                            data-tool="motor">电机</button><button
-                            class="tool-btn"
-                            data-tool="link">连接</button></div></div><div
-                    class="control-group"><h3>形状 (Shape)</h3><div
-                        id="shape-buttons" class="grid-buttons"><button
-                            class="shape-btn active"
-                            data-shape="box">方块</button><button
-                            class="shape-btn"
-                            data-shape="circle">圆形</button><button
-                            class="shape-btn"
-                            data-shape="polygon">多边形</button><button
-                            class="shape-btn"
-                            data-shape="trapezoid">梯形</button><button
-                            class="shape-btn"
-                            data-shape="bomb">炸弹</button><button
-                            class="shape-btn"
-                            data-shape="soft">柔性体</button></div></div></div><div
-                id="center-content"><div id="physics-container"><div
-                        id="win-message">挑战成功!</div></div></div><div
-                id="right-panel"><div id="app-actions-group"
-                    class="control-group"><h3>操作</h3><div
-                        class="grid-buttons"><button id="settings-btn"
-                            title="打开高级设置">高级设置 ⚙️</button><button id="help-btn"
-                            title="打开帮助说明">帮助说明 ❓</button></div></div><div
-                    class="control-group"><h3>挑战 (Challenges)</h3><label
-                        for="challenge-select">开始一个挑战:</label><select
-                        id="challenge-select"><option value>-- 自由模式
-                            --</option></select><p
-                        id="challenge-description">欢迎！这里是自由沙盒模式。尽情创造吧！</p></div></div></div>
-        <div id="settings-panel"><button id="close-settings-btn"
-                title="关闭">×</button><h2>高级设置</h2><div
-                class="control-group"><h3>场景管理</h3><div class="settings-row"
-                    id="scene-management-buttons"><button class="btn"
-                        id="save-browser-btn">存至浏览器</button><button class="btn"
-                        id="load-browser-btn">从浏览器读</button><button
-                        class="btn btn-primary"
-                        id="share-scene-btn">分享场景</button></div><div
-                    class="settings-row" id="scene-file-buttons"><button
-                        class="btn" id="save-file-btn">存为文件</button><label
-                        class="btn" for="load-file-input">从文件读</label><input
-                        type="file" id="load-file-input" accept=".json"
-                        style="display:none;"></div></div><div
-                class="control-group"><h3>世界设置</h3><div
-                    class="slider-group"><label>画布大小: <span
-                            id="box-size-value">700</span>px</label><input
-                        type="range" id="box-size-slider" min="400" max="1000"
-                        step="10" value="700"></div><div
-                    class="settings-row"><label>旋转模式:</label><select
-                        id="rotation-mode-select"><option
-                            value="visual">视觉旋转</option><option
-                            value="gravity">仅重力</option></select></div><div
-                    class="slider-group"><label>全局重力: <span
-                            id="gravity-value">1.0</span></label><input
-                        type="range" id="gravity-slider" min="0" max="3"
-                        step="0.1" value="1"></div><div
-                    class="slider-group"><label>全局弹力: <span
-                            id="restitution-value">0.1</span></label><input
-                        type="range" id="restitution-slider" min="0" max="1"
-                        step="0.05" value="0.1"></div><div
-                    class="slider-group"><label>时间流速: <span
-                            id="timescale-value">1.0</span></label><input
-                        type="range" id="timescale-slider" min="0.1" max="2"
-                        step="0.1" value="1"></div></div><div
-                class="control-group"><h3>摩擦力矩阵</h3><div
-                    class="slider-group"><label>方块↔方块: <span
-                            id="friction-box_box-value">1.0</span></label><input
-                        type="range" id="friction-box_box" min="0" max="2"
-                        step="0.1" value="1"></div><div
-                    class="slider-group"><label>圆形↔圆形: <span
-                            id="friction-circle_circle-value">1.0</span></label><input
-                        type="range" id="friction-circle_circle" min="0" max="2"
-                        step="0.1" value="1"></div><div
-                    class="slider-group"><label>方块↔圆形: <span
-                            id="friction-box_circle-value">1.0</span></label><input
-                        type="range" id="friction-box_circle" min="0" max="2"
-                        step="0.1" value="1"></div><div
-                    class="slider-group"><label>物体↔墙壁: <span
-                            id="friction-body_wall-value">1.0</span></label><input
-                        type="range" id="friction-body_wall" min="0" max="2"
-                        step="0.1" value="1"></div></div><hr><button
-                id="clear-all-btn" class="btn btn-danger"
-                style="width:100%;">清除所有物体</button></div>
-        <div id="help-panel-overlay"><div id="help-panel"><button
-                    id="close-help-btn">×</button><h2>玩法说明</h2><h3>基本操作</h3><ul><li><b>工具栏</b>:
-                        在左侧选择一个工具 (Tool) 和一个形状 (Shape)。</li><li><b>添加物体</b>: 选择
-                        <code>添加/拖拽</code> 工具，在画布空白处
-                        <b>单击鼠标左键</b>。</li><li><b>拖拽物体</b>: 选择
-                        <code>添加/拖拽</code> 工具，<b>按住鼠标左键</b>
-                        拖动物体。</li><li><b>使用工具</b>: 选择 <code>移除</code>,
-                        <code>固定</code> 等工具后，在目标物体上
-                        <b>单击鼠标左键</b>。</li><li><b>电机工具</b>: 在物体上 <b>左键</b>
-                        添加顺时针电机，<b>右键</b>
-                        添加逆时针电机。再次用同键点击可关闭。</li><li><b>连接工具</b>:
-                        依次点击两个物体来创建连接。再次点击第一个物体可取消选择。</li><li><b>旋转世界</b>: 按下
-                        <code>Q</code> / <code>E</code> 键或 <code>←</code> /
-                        <code>→</code> 方向键。按住 <code>Shift</code>
-                        可进行90度旋转。</li><li><b>右键</b>:
-                        在非电机工具下，右键可取消“连接”操作。</li></ul><h3>高级技巧
-                    (快捷键)</h3><ul><li><code>P</code>: 拖拽时**固定
-                        (Pin)**物体。</li><li><code>D</code>: 悬停时**删除
-                        (Delete)**物体。</li><li><code>R</code>: **重置
-                        (Reset)**世界旋转和重力。</li><li><code>C</code>: **清除
-                        (Clear)**所有物体 (会弹出确认框)。</li><li><code>空格键</code>: **暂停 /
-                        继续**物理模拟。</li></ul></div></div>
+
+        <div id="main-layout">
+            <div id="left-panel">
+                <div class="control-group">
+                    <h3>工具 (Tool)</h3>
+                    <div id="tool-buttons" class="grid-buttons">
+                        <button class="tool-btn active"
+                            data-tool="add">添加/拖拽</button>
+                        <button class="tool-btn" data-tool="pin">固定</button>
+                        <button class="tool-btn" data-tool="remove">移除</button>
+                        <button class="tool-btn" data-tool="motor">电机</button>
+                        <button class="tool-btn" data-tool="link">连接</button>
+                        <button class="tool-btn" data-tool="push"
+                            title="点击并拖拽物体以施加力">推动</button>
+                        <button class="tool-btn" data-tool="pen"
+                            title="点击并拖拽以绘制静态墙壁">画笔</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3>形状 (Shape)</h3>
+                    <div id="shape-buttons" class="grid-buttons"
+                        style="grid-template-columns: repeat(3, 1fr);">
+                        <button class="shape-btn active"
+                            data-shape="box">方块</button>
+                        <button class="shape-btn"
+                            data-shape="circle">圆形</button>
+                        <button class="shape-btn"
+                            data-shape="polygon">多边形</button>
+                        <button class="shape-btn"
+                            data-shape="trapezoid">梯形</button>
+                        <button class="shape-btn" data-shape="bomb">炸弹</button>
+                        <button class="shape-btn" data-shape="soft">柔性体</button>
+                        <button class="shape-btn" data-shape="platform"
+                            title="左键横放, 右键竖放">平台</button>
+                        <button class="shape-btn" data-shape="gear"
+                            title="创建一个齿轮">齿轮</button>
+                        <button class="shape-btn" data-shape="thruster"
+                            title="创建推进器, 右键开关">推进器</button>
+                        <button class="shape-btn" data-shape="attractor"
+                            title="创建引力源">引力源</button>
+                        <button class="shape-btn" data-shape="teleporter"
+                            title="依次点击创建成对的传送门">传送门</button>
+                        <button class="shape-btn" data-shape="gravityZone"
+                            title="创建反重力区域">反重力场</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="center-content">
+                <div id="physics-container">
+                    <div id="win-message">挑战成功!</div>
+                </div>
+            </div>
+
+            <div id="right-panel">
+                <div id="app-actions-group" class="control-group">
+                    <h3>操作</h3>
+                    <div class="grid-buttons">
+                        <button id="settings-btn" title="打开高级设置">高级设置
+                            ⚙️</button>
+                        <button id="help-btn" title="打开帮助说明">帮助说明 ❓</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3>挑战 (Challenges)</h3>
+                    <label for="challenge-select">开始一个挑战:</label>
+                    <select id="challenge-select">
+                        <option value>-- 自由模式 --</option>
+                    </select>
+                    <p id="challenge-description">欢迎！这里是自由沙盒模式。尽情创造吧！</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-panel">
+            <button id="close-settings-btn" title="关闭">×</button>
+            <h2>高级设置</h2>
+            <div class="control-group">
+                <h3>场景管理 (暂不可用)</h3>
+                <p
+                    style="font-size:12px; color: var(--secondary-text);">场景管理暂不支持新版形状(画笔/传送门等)，此功能待开发。</p>
+                <div class="settings-row" id="scene-management-buttons">
+                    <button class="btn" id="save-browser-btn"
+                        disabled>存至浏览器</button>
+                    <button class="btn" id="load-browser-btn"
+                        disabled>从浏览器读</button>
+                    <button class="btn btn-primary" id="share-scene-btn"
+                        disabled>分享场景</button>
+                </div>
+                <div class="settings-row" id="scene-file-buttons">
+                    <button class="btn" id="save-file-btn"
+                        disabled>存为文件</button>
+                    <label class="btn" for="load-file-input"
+                        style="background-color:#555; cursor: not-allowed;">从文件读</label>
+                    <input type="file" id="load-file-input" accept=".json"
+                        style="display:none;" disabled>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>世界设置</h3>
+                <div class="slider-group">
+                    <label>画布大小: <span id="box-size-value">700</span>px</label>
+                    <input type="range" id="box-size-slider" min="400"
+                        max="1000" step="10" value="700">
+                </div>
+                <div class="settings-row">
+                    <label>旋转模式:</label>
+                    <select id="rotation-mode-select">
+                        <option value="visual">视觉旋转</option>
+                        <option value="gravity">仅重力</option>
+                    </select>
+                </div>
+                <div class="slider-group">
+                    <label>全局重力: <span id="gravity-value">1.0</span></label>
+                    <input type="range" id="gravity-slider" min="0" max="3"
+                        step="0.1" value="1">
+                </div>
+                <div class="slider-group">
+                    <label>全局弹力: <span id="restitution-value">0.1</span></label>
+                    <input type="range" id="restitution-slider" min="0" max="1"
+                        step="0.05" value="0.1">
+                </div>
+                <div class="slider-group">
+                    <label>时间流速: <span id="timescale-value">1.0</span></label>
+                    <input type="range" id="timescale-slider" min="0.1" max="2"
+                        step="0.1" value="1">
+                </div>
+            </div>
+            <hr>
+            <button id="clear-all-btn" class="btn btn-danger"
+                style="width:100%;">清除所有物体</button>
+        </div>
+
+        <div id="help-panel-overlay">
+            <div id="help-panel">
+                <button id="close-help-btn">×</button>
+                <h2>玩法说明</h2>
+                <h3>基本操作</h3>
+                <ul>
+                    <li><b>工具栏</b>: 在左侧选择一个工具 (Tool) 和一个形状 (Shape)。</li>
+                    <li><b>添加物体</b>: 选择 <code>添加/拖拽</code> 工具，在画布空白处
+                        <b>单击鼠标左键</b>。</li>
+                    <li><b>拖拽物体</b>: 选择 <code>添加/拖拽</code> 工具，<b>按住鼠标左键</b>
+                        拖动物体。</li>
+                    <li><b>使用工具</b>: 选择 <code>移除</code>, <code>固定</code>
+                        等工具后，在目标物体上 <b>单击鼠标左键</b>。</li>
+                    <li><b>电机工具</b>: 在物体上 <b>左键</b> 添加顺时针电机，<b>右键</b>
+                        添加逆时针电机。</li>
+                    <li><b>连接工具</b>: 依次点击两个物体来创建连接。再次点击第一个物体可取消选择。</li>
+                    <li><b>推动工具</b>: 在物体上 <b>按住左键并拖拽</b> 来画出一个力的矢量，<b>松开左键</b>
+                        施加推力。</li>
+                    <li><b>画笔工具</b>: 选择 <code>画笔</code> 工具后，在画布上 <b>按住左键拖拽</b>
+                        来绘制自定义的静态墙壁。</li>
+                    <li><b>平台方向</b>: 创建 <code>平台</code> 时，<b>左键</b>
+                        创建横向平台，<b>右键</b> 创建竖向平台。</li>
+                    <li><b>推进器操作</b>: 创建推进器后，用任意工具 <b>右键点击</b> 来开关推进器。</li>
+                    <li><b>传送门创建</b>: 选择 <code>传送门</code>
+                        形状，在画布上<b>依次点击两次</b>，创建一对互相连接的传送门。</li>
+                    <li><b>旋转世界</b>: 按下 <code>Q</code> / <code>E</code> 键或
+                        <code>←</code> / <code>→</code> 方向键。按住
+                        <code>Shift</code> 可进行90度旋转。</li>
+                    <li><b>通用右键</b>:
+                        在非特殊操作（如电机、推进器）下，右键可取消“连接”、“推动”、“画笔”等操作。</li>
+                </ul>
+                <h3>高级技巧 (快捷键)</h3>
+                <ul>
+                    <li><code>P</code>: 拖拽时**固定 (Pin)**物体。</li>
+                    <li><code>D</code>: 悬停时**删除 (Delete)**物体。</li>
+                    <li><code>R</code>: **重置 (Reset)**世界旋转和重力。</li>
+                    <li><code>C</code>: **清除 (Clear)**所有物体 (会弹出确认框)。</li>
+                    <li><code>空格键</code>: **暂停 / 继续**物理模拟。</li>
+                </ul>
+            </div>
+        </div>
 
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
@@ -179,56 +242,152 @@
         const PhysicsLab = {
             Engine: Matter.Engine, Render: Matter.Render, Runner: Matter.Runner, Bodies: Matter.Bodies, Composite: Matter.Composite,
             Mouse: Matter.Mouse, MouseConstraint: Matter.MouseConstraint, Query: Matter.Query, Events: Matter.Events, Body: Matter.Body,
-            Constraint: Matter.Constraint, Composites: Matter.Composites,
+            Constraint: Matter.Constraint, Composites: Matter.Composites, Vertices: Matter.Vertices, Bounds: Matter.Bounds,
 
             engine: null, world: null, render: null, runner: null, mouseConstraint: null,
             linkFirstBody: null, worldAngle: 0,
             BOX_CENTER: { x: 350, y: 350 },
-            walls: [],
-            isPaused: false,
+            walls: [], isPaused: false,
+            
+            pushStartPos: null, pushEndPos: null, pushTargetBody: null,
+            isDrawing: false, penPoints: [],
+            teleporterLinkTarget: null,
 
-            CONFIG: { version: "4.2", currentTool: 'add', currentShape: 'box' },
+            CONFIG: { version: "6.0-ultra", currentTool: 'add', currentShape: 'box' },
             SETTINGS: { boxSize: 700, rotationMode: 'visual', gravityScale: 1.0, restitution: 0.1, timeScale: 1.0, friction: { box_box: 1.0, circle_circle: 1.0, box_circle: 1.0, body_wall: 1.0 }, motorSpeed: 0.2 },
             dom: {},
 
-            init() { this.cacheDOMElements(); this.initEngine(); this.resize(this.SETTINGS.boxSize); this.initUI(); this.initEvents(); this.run(); if (window.location.hash) { this.SceneManager.loadFromHash(); } },
+            init() { this.cacheDOMElements(); this.initEngine(); this.resize(this.SETTINGS.boxSize); this.initUI(); this.initEvents(); this.run(); },
             initEngine() { this.engine = this.Engine.create({ enableSleeping: true }); this.world = this.engine.world; this.render = this.Render.create({ element: this.dom.physicsContainer, engine: this.engine, options: { width: 700, height: 700, wireframes: false, background: 'transparent' }}); const mouse = this.Mouse.create(this.render.canvas); this.mouseConstraint = this.MouseConstraint.create(this.engine, { mouse: mouse, constraint: { stiffness: 0.2, render: { visible: false } }}); this.Composite.add(this.world, this.mouseConstraint); this.runner = this.Runner.create(); },
             resize(newSize) { this.SETTINGS.boxSize = newSize; this.BOX_CENTER = { x: newSize / 2, y: newSize / 2 }; document.documentElement.style.setProperty('--box-size', `${newSize}px`); this.render.bounds.max.x = newSize; this.render.bounds.max.y = newSize; this.render.options.width = newSize; this.render.options.height = newSize; this.render.canvas.width = newSize; this.render.canvas.height = newSize; if (this.walls.length > 0) { this.Composite.remove(this.world, this.walls); } const wallThickness = 50; const halfSize = newSize / 2; const wallOptions = { isStatic: true, label: 'wall', render: { visible: false } }; this.walls = [ this.Bodies.rectangle(halfSize, newSize + (wallThickness / 2), newSize + wallThickness, wallThickness, wallOptions), this.Bodies.rectangle(halfSize, -(wallThickness / 2), newSize + wallThickness, wallThickness, wallOptions), this.Bodies.rectangle(-(wallThickness / 2), halfSize, wallThickness, newSize + wallThickness, wallOptions), this.Bodies.rectangle(newSize + (wallThickness / 2), halfSize, wallThickness, newSize + wallThickness, wallOptions) ]; this.Composite.add(this.world, this.walls); if (this.dom.boxSizeValue) { this.dom.boxSizeValue.textContent = newSize; this.dom.sliders.box_size.value = newSize; } },
             run() { this.Render.run(this.render); this.Runner.run(this.runner, this.engine); this.updateVisualsAndGravity(); },
-            SceneManager: {
-                parent: null,
-                init(parent) { this.parent = parent; },
-                serialize() { const sceneData = { version: this.parent.CONFIG.version, settings: this.parent.SETTINGS, objects: [], constraints: [] }; const processedBodyIds = new Set(); this.parent.Composite.allComposites(this.parent.world).forEach(c => { if (c.shapeType === 'soft' && c.creationParams) { sceneData.objects.push({ shapeType: 'soft', creationParams: c.creationParams, isStatic: c.bodies[0].isStatic }); this.parent.Composite.allBodies(c).forEach(b => processedBodyIds.add(b.id)); } }); const bodies = this.parent.Composite.allBodies(this.parent.world); bodies.forEach(b => { if (processedBodyIds.has(b.id) || b.label === 'wall') return; if (!b.isStatic && b.label === 'userBody' || (b.isStatic && b.label === 'userBody')) { const bodyData = { id: b.id, label: b.label, shapeType: b.shapeType, motorDirection: b.motorDirection || 0, isStatic: b.isStatic, position: b.position, angle: b.angle, velocity: b.velocity, angularVelocity: b.angularVelocity, render: b.render }; if (b.isBomb) { bodyData.timeRemaining = b.explodeTime > Date.now() ? b.explodeTime - Date.now() : 0; } sceneData.objects.push(bodyData); } }); sceneData.constraints = this.parent.Composite.allConstraints(this.parent.world).filter(c => c.label === 'userConstraint').map(c => ({ label: 'userConstraint', bodyAId: c.bodyA.id, bodyBId: c.bodyB.id, stiffness: c.stiffness })); return JSON.stringify(sceneData); },
-                deserialize(jsonString) { try { const sceneData = JSON.parse(jsonString); if (!sceneData.version) throw new Error("无效的场景格式 (无版本信息)"); this.parent.clearAll(true); this.parent.SETTINGS = { ...this.parent.SETTINGS, ...sceneData.settings, friction: { ...this.parent.SETTINGS.friction, ...(sceneData.settings.friction || {}) } }; this.parent.updateUIFromConfig(); const idMap = new Map(); sceneData.objects.forEach(data => { let newObject; if (data.shapeType === 'soft') { newObject = this.parent.createSoftBody(data.creationParams); if (data.isStatic) { newObject.bodies.forEach(p => this.parent.Body.setStatic(p, true)); } this.parent.Composite.add(this.parent.world, newObject); } else { if (data.shapeType === 'bomb') { if (data.timeRemaining <= 0) return; newObject = this.parent.createShape(data.position.x, data.position.y, 'bomb', { render: data.render }, false); newObject.explodeTime = Date.now() + data.timeRemaining; setTimeout(() => this.parent.explode(newObject), data.timeRemaining); } else { newObject = this.parent.createShape(data.position.x, data.position.y, data.shapeType, { angle: data.angle, render: data.render, label: data.label || 'userBody' }, false); } if(data.isStatic) { this.parent.Body.setStatic(newObject, true); } this.parent.Body.setVelocity(newObject, data.velocity); this.parent.Body.setAngularVelocity(newObject, data.angularVelocity); newObject.motorDirection = data.motorDirection || 0; idMap.set(data.id, newObject); } }); sceneData.constraints?.forEach(data => { const bodyA = idMap.get(data.bodyAId); const bodyB = idMap.get(data.bodyBId); if (bodyA && bodyB) { const constraint = this.parent.Constraint.create({ bodyA, bodyB, stiffness: data.stiffness, label: 'userConstraint', render: { strokeStyle: '#fff', lineWidth: 2 } }); this.parent.Composite.add(this.parent.world, constraint); } }); return true; } catch (e) { console.error("加载场景失败:", e); this.parent.showToast(`加载场景失败: ${e.message}`, 'error'); return false; } },
-                saveToBrowser() { localStorage.setItem('savedScene', this.serialize()); this.parent.showToast('场景已保存至浏览器!', 'success'); },
-                loadFromBrowser() { const s = localStorage.getItem('savedScene'); if (s && this.deserialize(s)) this.parent.showToast('已从浏览器加载场景', 'info'); else if (!s) this.parent.showToast('浏览器中没有已存场景', 'error'); },
-                saveToFile() { const blob = new Blob([this.serialize()], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `physics_lab_scene_${Date.now()}.json`; a.click(); URL.revokeObjectURL(a.href); this.parent.showToast('场景已导出为文件', 'success'); },
-                loadFromFile(file) { if (!file) return; const reader = new FileReader(); reader.onload = e => { if (this.deserialize(e.target.result)) this.parent.showToast(`已从文件加载场景`, 'info'); }; reader.readAsText(file); },
-                share() { try { const jsonString = this.serialize(); const safeBase64 = btoa(encodeURIComponent(jsonString)); const url = `${window.location.href.split('#')[0]}#${safeBase64}`; navigator.clipboard.writeText(url).then(() => this.parent.showToast('分享链接已复制到剪贴板!', 'success'), () => this.parent.showToast('复制失败', 'error')); } catch (e) { console.error("Share scene failed:", e); this.parent.showToast('创建分享链接失败，场景可能过大', 'error'); } },
-                loadFromHash() { try { const hash = window.location.hash.substring(1); if (!hash) return; const jsonString = decodeURIComponent(atob(hash)); if (this.deserialize(jsonString)) { this.parent.showToast('已从分享链接加载场景', 'info'); } } catch (e) { console.error("Load from hash failed:", e); this.parent.showToast("URL中的场景数据无效或已损坏", 'error'); } }
+            
+            createGearVertices(radius, teeth, toothHeight) { const vertices = []; const angleStep = (2 * Math.PI) / (teeth * 2); for (let i = 0; i < teeth * 2; i++) { const currentRadius = (i % 2 === 0) ? radius : radius - toothHeight; const angle = i * angleStep; vertices.push({ x: currentRadius * Math.cos(angle), y: currentRadius * Math.sin(angle) }); } return this.Vertices.create(vertices); },
+            
+            createShape(x, y, shapeType = this.CONFIG.currentShape, options = {}, playSound = true) {
+                const size = this.SETTINGS.boxSize / 12;
+                const defaultRender = { fillStyle: '#03a9f4', strokeStyle: '#e0e0e0', lineWidth: 0 };
+                const bodyOptions = { restitution: this.SETTINGS.restitution, label: 'userBody', render: defaultRender, ...options };
+                let body;
+                switch (shapeType) {
+                    case 'circle': body = this.Bodies.circle(x, y, size / 2, bodyOptions); break;
+                    case 'polygon': body = this.Bodies.polygon(x, y, 5, size / 2, bodyOptions); break;
+                    case 'trapezoid': body = this.Bodies.trapezoid(x, y, size, size * 0.7, 0.7, bodyOptions); break;
+                    case 'bomb': body = this.Bodies.circle(x, y, size / 2, { ...bodyOptions, render: { fillStyle: '#212121', strokeStyle: '#ff5722', lineWidth: 3 }}); body.isBomb = true; body.explodeTime = Date.now() + 2000; if (playSound) setTimeout(() => this.explode(body), 2000); break;
+                    case 'soft': body = this.createSoftBody({ x, y, columns: 5, rows: 5, columnGap: 5, rowGap: 5 }); this.Composite.add(this.world, body); break;
+                    case 'platform': body = this.Bodies.rectangle(x, y, size * 2.5, size * 0.5, { ...bodyOptions, isStatic: true, render: { fillStyle: '#8d6e63' }}); break;
+                    case 'gear': const gearParams = options.creationParams || { radius: size * 0.8, teeth: 8, toothHeight: size * 0.2 }; const gearVertices = this.createGearVertices(gearParams.radius, gearParams.teeth, gearParams.toothHeight); body = this.Bodies.fromVertices(x, y, [gearVertices], { ...bodyOptions, render: { fillStyle: '#78909c' }}, true); body.creationParams = gearParams; break;
+                    case 'thruster': body = this.Bodies.trapezoid(x, y, size*0.8, size*0.8, 0.5, { ...bodyOptions, render: { fillStyle: '#607d8b', strokeStyle: '#cfd8dc', lineWidth: 2 }}); body.isThruster = true; body.isThrusterActive = false; body.thrustForce = 0.005; break;
+                    case 'attractor': body = this.Bodies.circle(x, y, size / 3, { ...bodyOptions, isStatic: true, isSensor: true, render: { fillStyle: '#7e57c2', strokeStyle: '#ede7f6', lineWidth: 4 }}); body.isAttractor = true; body.attractionRadius = size * 3; body.attractionForce = 0.0005; break;
+                    case 'teleporter':
+                        body = this.Bodies.circle(x, y, size / 3, { isStatic: true, isSensor: true, label: 'userBody' });
+                        body.isTeleporter = true;
+                        body.linkedTeleporter = null;
+                        if (!this.teleporterLinkTarget) {
+                            this.teleporterLinkTarget = body;
+                            body.render.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--teleporter-a-color');
+                            this.showToast('入口已创建，请在另一位置创建出口', 'info');
+                        } else {
+                            body.linkedTeleporter = this.teleporterLinkTarget;
+                            this.teleporterLinkTarget.linkedTeleporter = body;
+                            body.render.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--teleporter-b-color');
+                            this.showToast('传送门已配对！', 'success');
+                            this.teleporterLinkTarget = null;
+                        }
+                        break;
+                    case 'gravityZone':
+                        body = this.Bodies.rectangle(x, y, size * 3, size * 3, { isStatic: true, isSensor: true, label: 'userBody', render: { fillStyle: getComputedStyle(document.documentElement).getPropertyValue('--gravity-zone-color'), strokeStyle: '#fff', lineWidth: 1 }});
+                        body.isGravityZone = true;
+                        break;
+                    default: body = this.Bodies.rectangle(x, y, size, size, bodyOptions); break;
+                }
+                if (body && body.type !== 'composite') { body.shapeType = shapeType; this.Composite.add(this.world, body); }
+                if (playSound && shapeType !== 'teleporter') this.showToast(`${shapeType} 已添加`, 'info', 1000);
+                return body;
             },
-            createShape(x, y, shapeType = this.CONFIG.currentShape, options = {}, playSound = true) { const size = this.SETTINGS.boxSize / 12; const defaultRender = { fillStyle: '#03a9f4', strokeStyle: '#e0e0e0', lineWidth: 0 }; const bodyOptions = { restitution: this.SETTINGS.restitution, label: 'userBody', render: defaultRender, ...options }; let body; switch (shapeType) { case 'circle': body = this.Bodies.circle(x, y, size / 2, bodyOptions); break; case 'polygon': body = this.Bodies.polygon(x, y, 5, size / 2, bodyOptions); break; case 'trapezoid': body = this.Bodies.trapezoid(x, y, size, size * 0.7, 0.7, bodyOptions); break; case 'bomb': body = this.Bodies.circle(x, y, size / 2, { ...bodyOptions, render: { fillStyle: '#212121', strokeStyle: '#ff5722', lineWidth: 3 }}); body.isBomb = true; body.explodeTime = Date.now() + 2000; if (playSound) setTimeout(() => this.explode(body), 2000); break; case 'soft': body = this.createSoftBody({ x, y, columns: 5, rows: 5, columnGap: 5, rowGap: 5 }); this.Composite.add(this.world, body); break; default: body = this.Bodies.rectangle(x, y, size, size, bodyOptions); break; } if (body.type !== 'composite') { body.shapeType = shapeType; this.Composite.add(this.world, body); } if (playSound) this.showToast(`${shapeType} 已添加`, 'info', 1000); return body; },
             createSoftBody(params) { const { x, y, columns, rows, columnGap, rowGap } = params; const softBody = this.Composites.stack(x - (columns * 10)/2, y - (rows * 10)/2, columns, rows, columnGap, rowGap, (px, py) => this.Bodies.circle(px, py, 5, { friction: 0.1, restitution: 0.4, render: {fillStyle: '#FDD835'}, label: 'userBody' })); this.Composites.mesh(softBody, columns, rows, false, { stiffness: 0.6, render: { type: 'line', visible: true, strokeStyle: 'rgba(255,255,255,0.5)' } }); softBody.shapeType = 'soft'; softBody.label = 'userBody'; softBody.creationParams = params; return softBody; },
-            explode(bomb) { if (bomb.isExploded || !this.Composite.get(this.world, bomb.id, 'body')) return; bomb.isExploded = true; const pos = bomb.position; const radius = this.SETTINGS.boxSize / 4; this.Composite.remove(this.world, bomb); const allBodies = this.Composite.allBodies(this.world); const affectedBodies = this.Query.region(allBodies, { min: { x: pos.x - radius, y: pos.y - radius }, max: { x: pos.x + radius, y: pos.y + radius } }); affectedBodies.forEach(body => { if (body.isStatic) return; if (body.parent.shapeType === 'soft') { if (!body.parent.isBeingRemoved) { body.parent.isBeingRemoved = true; this.Composite.remove(this.world, body.parent); } } else { this.Composite.remove(this.world, body); } }); this.showToast('💥 BOOM!', 'error'); },
-            clearAll(quiet = false) { if (!quiet && !confirm('你确定要清除画布上所有的物体吗？此操作无法撤销。')) return; this.Composite.clear(this.world, false); this.initEngine(); this.Runner.run(this.runner, this.engine); this.resize(this.SETTINGS.boxSize); if (!quiet) this.showToast('已清空画布', 'info'); },
+            explode(bomb) { if (bomb.isExploded || !this.Composite.get(this.world, bomb.id, 'body')) return; bomb.isExploded = true; const pos = bomb.position; const radius = this.SETTINGS.boxSize / 4; this.Composite.remove(this.world, bomb); const allBodies = this.Composite.allBodies(this.world); const affectedBodies = this.Query.region(allBodies, { min: { x: pos.x - radius, y: pos.y - radius }, max: { x: pos.x + radius, y: pos.y + radius } }); affectedBodies.forEach(body => { if (body.isStatic || body.isSensor) return; if (body.parent && body.parent.shapeType === 'soft') { if (!body.parent.isBeingRemoved) { body.parent.isBeingRemoved = true; this.Composite.remove(this.world, body.parent); } } else { this.Composite.remove(this.world, body); } }); this.showToast('💥 BOOM!', 'error'); },
+            clearAll(quiet = false) { if (!quiet && !confirm('你确定要清除画布上所有的物体吗？此操作无法撤销。')) return; this.Composite.clear(this.world, false); this.initEngine(); this.Runner.run(this.runner, this.engine); this.resize(this.SETTINGS.boxSize); this.teleporterLinkTarget = null; if (!quiet) this.showToast('已清空画布', 'info'); },
             cacheDOMElements() { const ids = [ 'physics-container', 'settings-panel', 'help-panel-overlay', 'help-panel', 'toast-container', 'tool-buttons', 'shape-buttons', 'challenge-select', 'challenge-description', 'win-message', 'settings-btn', 'help-btn', 'close-settings-btn', 'close-help-btn', 'save-browser-btn', 'load-browser-btn', 'share-scene-btn', 'save-file-btn', 'load-file-input', 'clear-all-btn', 'rotation-mode-select' ]; ids.forEach(id => { this.dom[id.replace(/-(\w)/g, (m, p1) => p1.toUpperCase())] = document.getElementById(id); }); const sliders = ['box-size', 'gravity', 'restitution', 'timescale', 'friction-box_box', 'friction-circle_circle', 'friction-box_circle', 'friction-body_wall']; this.dom.sliders = {}; this.dom.values = {}; sliders.forEach(s => { const id = s.replace(/-/g, '_'); this.dom.sliders[id] = document.getElementById(`${s}-slider`); this.dom.values[id] = document.getElementById(`${s}-value`); }); },
-            initUI() { this.SceneManager.init(this); this.dom.toolButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.setActiveTool(e.target.dataset.tool); }}); this.dom.shapeButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.CONFIG.currentShape = e.target.dataset.shape; this.dom.shapeButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); }}); this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.saveBrowserBtn.onclick = () => this.SceneManager.saveToBrowser(); this.dom.loadBrowserBtn.onclick = () => this.SceneManager.loadFromBrowser(); this.dom.shareSceneBtn.onclick = () => this.SceneManager.share(); this.dom.saveFileBtn.onclick = () => this.SceneManager.saveToFile(); this.dom.loadFileInput.onchange = e => { this.SceneManager.loadFromFile(e.target.files[0]); e.target.value = ''; }; this.dom.clearAllBtn.onclick = () => this.clearAll(); this.dom.rotationModeSelect.onchange = e => { this.SETTINGS.rotationMode = e.target.value; this.updateVisualsAndGravity(); }; this.dom.sliders.box_size.addEventListener('input', e => { this.dom.values.box_size.textContent = e.target.value; }); this.dom.sliders.box_size.addEventListener('change', e => { this.resize(parseInt(e.target.value, 10)); }); for(const key in this.dom.sliders) { if (key !== 'box_size' && this.dom.sliders[key]) { this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key)); } } this.updateUIFromConfig(); this.setActiveTool('add'); },
-            setActiveTool(tool) { this.CONFIG.currentTool = tool; this.dom.toolButtons.querySelector('.active')?.classList.remove('active'); this.dom.toolButtons.querySelector(`[data-tool=${tool}]`).classList.add('active'); this.linkFirstBody = null; if (tool === 'add') { this.mouseConstraint.collisionFilter.mask = 0xFFFFFFFF; this.render.canvas.style.cursor = 'grab'; } else { this.mouseConstraint.collisionFilter.mask = 0x0000; this.render.canvas.style.cursor = 'crosshair'; } },
+            initUI() { this.dom.toolButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.setActiveTool(e.target.dataset.tool); }}); this.dom.shapeButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.CONFIG.currentShape = e.target.dataset.shape; this.dom.shapeButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); this.teleporterLinkTarget = null; }}); this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.clearAllBtn.onclick = () => this.clearAll(); this.dom.rotationModeSelect.onchange = e => { this.SETTINGS.rotationMode = e.target.value; this.updateVisualsAndGravity(); }; this.dom.sliders.box_size.addEventListener('input', e => { this.dom.values.box_size.textContent = e.target.value; }); this.dom.sliders.box_size.addEventListener('change', e => { this.resize(parseInt(e.target.value, 10)); }); for(const key in this.dom.sliders) { if (key !== 'box_size' && this.dom.sliders[key]) { this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key)); } } this.updateUIFromConfig(); this.setActiveTool('add'); },
+            setActiveTool(tool) { this.CONFIG.currentTool = tool; this.dom.toolButtons.querySelector('.active')?.classList.remove('active'); this.dom.toolButtons.querySelector(`[data-tool=${tool}]`).classList.add('active'); this.linkFirstBody = null; this.teleporterLinkTarget = null; this.isDrawing = false; this.penPoints = []; if (tool === 'add') { this.mouseConstraint.collisionFilter.mask = 0xFFFFFFFF; this.render.canvas.style.cursor = 'grab'; } else { this.mouseConstraint.collisionFilter.mask = 0x0000; this.render.canvas.style.cursor = 'crosshair'; } },
             updateUIFromConfig() { this.resize(this.SETTINGS.boxSize); this.dom.rotationModeSelect.value = this.SETTINGS.rotationMode; this.dom.sliders.gravity.value = this.SETTINGS.gravityScale; this.dom.values.gravity.textContent = this.SETTINGS.gravityScale.toFixed(1); this.dom.sliders.restitution.value = this.SETTINGS.restitution; this.dom.values.restitution.textContent = this.SETTINGS.restitution.toFixed(2); this.dom.sliders.timescale.value = this.SETTINGS.timeScale; this.dom.values.timescale.textContent = this.SETTINGS.timeScale.toFixed(1); this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; Object.keys(this.SETTINGS.friction).forEach(k => { if(this.dom.sliders[`friction_${k}`]) { this.dom.sliders[`friction_${k}`].value = this.SETTINGS.friction[k]; this.dom.values[`friction_${k}`].textContent = this.SETTINGS.friction[k].toFixed(1); }}); },
             updateVisualsAndGravity() { this.engine.gravity.x = this.SETTINGS.gravityScale * Math.sin(this.worldAngle); this.engine.gravity.y = this.SETTINGS.gravityScale * Math.cos(this.worldAngle); if (this.SETTINGS.rotationMode === 'visual') { this.dom.physicsContainer.style.transformOrigin = `${this.BOX_CENTER.x}px ${this.BOX_CENTER.y}px`; this.dom.physicsContainer.style.transform = `rotate(${this.worldAngle * (180 / Math.PI)}deg)`; } else { this.dom.physicsContainer.style.transformOrigin = 'center center'; this.dom.physicsContainer.style.transform = 'rotate(0deg)'; } },
             rotateWorld(angleChange) { const sin = Math.sin(angleChange); const cos = Math.cos(angleChange); const center = this.BOX_CENTER; const bodies = this.Composite.allBodies(this.world); bodies.forEach(body => { if (body.isStatic) return; const relPos = { x: body.position.x - center.x, y: body.position.y - center.y }; const newPos = { x: center.x + relPos.x * cos - relPos.y * sin, y: center.y + relPos.x * sin + relPos.y * cos }; const oldVel = body.velocity; const newVel = { x: oldVel.x * cos - oldVel.y * sin, y: oldVel.x * sin + oldVel.y * cos }; const newAngle = body.angle + angleChange; this.Body.setPosition(body, newPos); this.Body.setVelocity(body, newVel); this.Body.setAngle(body, newAngle); }); this.worldAngle += angleChange; this.updateVisualsAndGravity(); },
             handleSliderInput(e, key) { const value = parseFloat(e.target.value); const isFriction = key.startsWith('friction'); const prop = isFriction ? key.replace('friction_', '') : (key === 'gravity' ? 'gravityScale' : key); const target = isFriction ? this.SETTINGS.friction : this.SETTINGS; target[prop] = value; this.dom.values[key].textContent = value.toFixed(key === 'restitution' ? 2 : 1); if (key === 'timeScale') { this.SETTINGS.timeScale = value; if (!this.isPaused) { this.engine.timing.timeScale = value; } } if (key === 'gravityScale') { this.updateVisualsAndGravity(); } },
             initEvents() {
-                this.Events.on(this.world, 'afterRemove', (event) => { const removedObject = event.object; if (!removedObject) return; const removedBodyIds = new Set(); if (removedObject.type === 'composite') { this.Composite.allBodies(removedObject).forEach(body => removedBodyIds.add(body.id)); } else if (removedObject.type === 'body') { removedBodyIds.add(removedObject.id); } else { return; } if (removedBodyIds.size === 0) return; const constraintsToRemove = this.Composite.allConstraints(this.world).filter(c => { return c.label === 'userConstraint' && (removedBodyIds.has(c.bodyA.id) || removedBodyIds.has(c.bodyB.id)); }); if (constraintsToRemove.length > 0) { this.Composite.remove(this.world, constraintsToRemove); } });
-                this.Events.on(this.engine, 'beforeUpdate', () => { const bodies = this.Composite.allBodies(this.world); for (const body of bodies) { if (body.motorDirection) { this.Body.setAngularVelocity(body, this.SETTINGS.motorSpeed * body.motorDirection); } } });
-                this.render.canvas.addEventListener('mousedown', (event) => { if (event.button !== 0) return; const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos); switch (this.CONFIG.currentTool) { case 'add': if (!body) this.createShape(mousePos.x, mousePos.y); break; case 'remove': if(body) this.Composite.remove(this.world, body); break; case 'pin': this.togglePin(body); break; case 'motor': this.toggleMotor(body, 1); break; case 'link': this.handleLinkTool(body); break; } });
-                this.render.canvas.addEventListener('contextmenu', e => { e.preventDefault(); const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos); if (this.CONFIG.currentTool === 'motor') { this.toggleMotor(body, -1); } else { if (this.linkFirstBody) { this.linkFirstBody = null; this.showToast('已取消连接操作', 'info'); } } });
+                this.Events.on(this.engine, 'beforeUpdate', () => {
+                    const bodies = this.Composite.allBodies(this.world);
+                    const attractors = bodies.filter(b => b.isAttractor);
+                    const gravityZones = bodies.filter(b => b.isGravityZone);
+                    for (const body of bodies) {
+                        if (body.isStatic || body.isSensor) { if (body.teleportCooldown > 0) body.teleportCooldown--; continue; }
+                        if (body.motorDirection) this.Body.setAngularVelocity(body, this.SETTINGS.motorSpeed * body.motorDirection);
+                        if (body.isThruster && body.isThrusterActive) { const forceMagnitude = body.thrustForce * this.SETTINGS.timeScale; const force = { x: Math.sin(body.angle) * forceMagnitude, y: -Math.cos(body.angle) * forceMagnitude }; this.Body.applyForce(body, body.position, force); }
+                        attractors.forEach(attractor => { const vec = {x: attractor.position.x - body.position.x, y: attractor.position.y - body.position.y}; const distSq = vec.x * vec.x + vec.y * vec.y; if (distSq > 1 && distSq < attractor.attractionRadius * attractor.attractionRadius) { const forceMag = attractor.attractionForce * (body.mass / distSq); this.Body.applyForce(body, body.position, {x: vec.x * forceMag, y: vec.y * forceMag}); }});
+                        let inZone = false;
+                        for (const zone of gravityZones) { if (this.Bounds.contains(zone.bounds, body.position)) { inZone = true; break; } }
+                        if (inZone) { const antiGravity = { x: -this.engine.gravity.x * this.engine.gravity.scale * body.mass, y: -this.engine.gravity.y * this.engine.gravity.scale * body.mass }; this.Body.applyForce(body, body.position, antiGravity); const upwardForce = { x: 0, y: -0.002 * body.mass }; this.Body.applyForce(body, body.position, upwardForce); }
+                        if (body.teleportCooldown > 0) body.teleportCooldown--;
+                    }
+                });
+
+                this.Events.on(this.render, 'afterRender', (event) => {
+                    const context = event.source.context;
+                    if (this.pushStartPos && this.pushEndPos) { context.beginPath(); context.moveTo(this.pushStartPos.x, this.pushStartPos.y); context.lineTo(this.pushEndPos.x, this.pushEndPos.y); context.strokeStyle = 'rgba(255, 171, 64, 0.8)'; context.lineWidth = 3; context.stroke(); }
+                    if (this.isDrawing && this.penPoints.length > 1) { context.beginPath(); context.moveTo(this.penPoints[0].x, this.penPoints[0].y); for (let i = 1; i < this.penPoints.length; i++) { context.lineTo(this.penPoints[i].x, this.penPoints[i].y); } context.strokeStyle = 'rgba(3, 169, 244, 0.7)'; context.lineWidth = 4; context.stroke(); }
+                });
+                
+                this.Events.on(this.engine, 'collisionStart', (event) => {
+                    event.pairs.forEach(pair => {
+                        const checkTeleport = (teleporter, otherBody) => { if (otherBody.isSensor || otherBody.isStatic || otherBody.teleportCooldown > 0 || !teleporter.linkedTeleporter) return; otherBody.teleportCooldown = 20; teleporter.linkedTeleporter.teleportCooldown = 20; const dest = teleporter.linkedTeleporter.position; const vel = otherBody.velocity; const angVel = otherBody.angularVelocity; this.Body.setPosition(otherBody, { x: dest.x, y: dest.y }); this.Body.setVelocity(otherBody, vel); this.Body.setAngularVelocity(otherBody, angVel); };
+                        if (pair.bodyA.isTeleporter) checkTeleport(pair.bodyA, pair.bodyB);
+                        if (pair.bodyB.isTeleporter) checkTeleport(pair.bodyB, pair.bodyA);
+                    });
+                });
+
+                this.render.canvas.addEventListener('mousedown', (event) => {
+                    if (event.button !== 0) return;
+                    const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos);
+                    switch (this.CONFIG.currentTool) {
+                        case 'add': if (!body) this.createShape(mousePos.x, mousePos.y); break;
+                        case 'remove': if(body) this.Composite.remove(this.world, body); break;
+                        case 'pin': this.togglePin(body); break;
+                        case 'motor': this.toggleMotor(body, 1); break;
+                        case 'link': this.handleLinkTool(body); break;
+                        case 'push': if (body && !body.isStatic) { this.pushStartPos = { ...mousePos }; this.pushEndPos = { ...mousePos }; this.pushTargetBody = body; } break;
+                        case 'pen': this.isDrawing = true; this.penPoints = [{...mousePos}]; break;
+                    }
+                });
+                
+                window.addEventListener('mousemove', (event) => { const mousePos = this.mouseConstraint.mouse.position; if (this.pushStartPos) this.pushEndPos = mousePos; if (this.isDrawing) this.penPoints.push({...mousePos}); });
+
+                window.addEventListener('mouseup', (event) => {
+                    if (event.button !== 0) return;
+                    if (this.pushStartPos && this.pushTargetBody) { const forceVector = { x: (this.pushStartPos.x - this.pushEndPos.x) * 0.0005, y: (this.pushStartPos.y - this.pushEndPos.y) * 0.0005 }; this.Body.applyForce(this.pushTargetBody, this.pushStartPos, forceVector); this.pushStartPos = this.pushEndPos = this.pushTargetBody = null; }
+                    if (this.isDrawing) { this.isDrawing = false; if (this.penPoints.length > 2) { const simplified = this.Vertices.removeCollinear(this.Vertices.create(this.penPoints)); if(simplified.length > 1) { const wall = this.Bodies.fromVertices(0, 0, [simplified], { isStatic: true, label: 'userBody', render: { fillStyle: 'transparent', strokeStyle: '#03a9f4', lineWidth: 4 } }); wall.shapeType = 'penWall'; this.Body.setPosition(wall, { x: wall.position.x, y: wall.position.y }); this.Composite.add(this.world, wall); } } this.penPoints = []; }
+                });
+
+                this.render.canvas.addEventListener('contextmenu', e => {
+                    e.preventDefault();
+                    const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos);
+                    if (this.CONFIG.currentTool === 'motor') { this.toggleMotor(body, -1); return; }
+                    if (body && body.isThruster) { this.toggleThruster(body); return; }
+                    if (!body && this.CONFIG.currentTool === 'add' && this.CONFIG.currentShape === 'platform') { this.createShape(mousePos.x, mousePos.y, 'platform', { angle: Math.PI / 2 }); return; }
+                    if (this.linkFirstBody) { this.linkFirstBody = null; this.showToast('已取消连接操作', 'info'); }
+                    if (this.pushStartPos) { this.pushStartPos = null; this.showToast('已取消推动操作', 'info'); }
+                    if (this.isDrawing) { this.isDrawing = false; this.penPoints = []; this.showToast('已取消绘制', 'info'); }
+                    if (this.teleporterLinkTarget) { this.Composite.remove(this.world, this.teleporterLinkTarget); this.teleporterLinkTarget = null; this.showToast('已取消传送门配对', 'info'); }
+                });
+                
                 window.addEventListener('keydown', e => { if (e.target.matches('input, select')) return; const mousePos = this.mouseConstraint.mouse.position; const bodyUnderMouse = this.getBodyAt(mousePos); let angleChange = 0; switch (e.key.toLowerCase()) { case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI / 2 : 0.05; break; case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI / 2 : 0.05); break; case 'c': e.preventDefault(); this.clearAll(); break; case 'r': e.preventDefault(); this.rotateWorld(-this.worldAngle); this.showToast('世界旋转已重置', 'info'); break; case ' ': e.preventDefault(); this.isPaused = !this.isPaused; this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; this.showToast(this.isPaused ? '已暂停' : '已继续', 'info'); break; case 'd': if (bodyUnderMouse) { e.preventDefault(); this.Composite.remove(this.world, bodyUnderMouse); this.showToast('物体已删除!', 'info'); } break; case 'p': if (this.mouseConstraint.body && !this.mouseConstraint.body.isStatic) { e.preventDefault(); this.togglePin(this.mouseConstraint.body); this.mouseConstraint.body = null; } break; case 'escape': this.dom.settingsPanel.style.display = 'none'; this.dom.helpPanelOverlay.style.display = 'none'; break; } if (angleChange) { e.preventDefault(); this.rotateWorld(angleChange); } });
             },
-            getBodyAt(position) { const bodiesUnderMouse = this.Query.point(this.Composite.allBodies(this.world), position); const userBodies = bodiesUnderMouse.filter(b => b.label === 'userBody'); if (userBodies.length === 0) return null; const softBodyParent = userBodies.find(b => b.parent.shapeType === 'soft'); return softBodyParent ? softBodyParent.parent : userBodies.reduce((p, c) => (c.area || 0) < (p.area || 0) ? c : p); },
+            getBodyAt(position) { const bodiesUnderMouse = this.Query.point(this.Composite.allBodies(this.world), position); const userBodies = bodiesUnderMouse.filter(b => b.label === 'userBody'); if (userBodies.length === 0) return null; const softBodyParent = userBodies.find(b => b.parent && b.parent.shapeType === 'soft'); return softBodyParent ? softBodyParent.parent : userBodies.reduce((p, c) => ((c.area || 1) < (p.area || 1)) ? c : p); },
             handleLinkTool(body) { if(body && body.type === 'body') { if(!this.linkFirstBody) { this.linkFirstBody = body; this.showToast('已选择第一个物体，请选择第二个', 'info'); } else if(this.linkFirstBody !== body) { const c = this.Constraint.create({bodyA:this.linkFirstBody, bodyB:body, stiffness:0.1, label:'userConstraint', render: { strokeStyle: '#fff', lineWidth: 2 }}); this.Composite.add(this.world, c); this.linkFirstBody = null; } else { this.linkFirstBody = null; this.showToast('已取消连接操作', 'info'); } } },
             togglePin(body) { if (!body) return; if (body.shapeType === 'soft') { const newStaticState = !body.bodies[0].isStatic; body.bodies.forEach(p => { this.Body.setStatic(p, newStaticState); p.motorDirection = 0; }); this.showToast(`柔性体已${newStaticState ? '固定' : '取消固定'}!`, 'info'); } else if (body.type === 'body') { const newStaticState = !body.isStatic; this.Body.setStatic(body, newStaticState); if (newStaticState) body.motorDirection = 0; this.showToast(`物体已${newStaticState ? '固定' : '取消固定'}!`, 'info'); } },
             toggleMotor(body, direction) { if (body && body.type === 'body' && !body.isStatic) { body.motorDirection = (body.motorDirection === direction) ? 0 : direction; } },
+            toggleThruster(body) { if (!body || !body.isThruster || body.isStatic) return; body.isThrusterActive = !body.isThrusterActive; this.updateThrusterVisual(body); this.showToast(`推进器已${body.isThrusterActive ? '开启' : '关闭'}`, 'info'); },
+            updateThrusterVisual(body) { if (!body || !body.isThruster) return; body.render.fillStyle = body.isThrusterActive ? '#ffab40' : '#607d8b'; body.render.strokeStyle = body.isThrusterActive ? '#fff' : '#cfd8dc'; },
             showToast(message, type = 'info', duration = 3000) { const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.textContent = message; this.dom.toastContainer.appendChild(toast); setTimeout(() => { toast.style.animation = 'slideOut 0.5s forwards'; toast.addEventListener('animationend', () => toast.remove()); }, duration); }
         };
 
