@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>终极物理实验室 3.0 (重构增强版 - 最终修正)</title>
+        <title>终极物理实验室 3.0 (旋转逻辑修正)</title>
         <style>
         :root {
             --box-size: 700px; --primary-text: #e0e0e0; --secondary-text: #b0b0b0; --background-main: #1a1a1a; --background-panel: #2c2c2c;
@@ -184,8 +184,7 @@
                 </ul>
             </div></div>
 
-        <script
-            src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
         <script>
     document.addEventListener('DOMContentLoaded', () => {
         const PhysicsLab = {
@@ -195,6 +194,8 @@
 
             engine: null, world: null, render: null, runner: null, mouseConstraint: null,
             linkFirstBody: null, activeWinCondition: null, worldAngle: 0,
+
+            BOX_CENTER: { x: 350, y: 350 },
 
             CONFIG: {
                 version: "3.0", currentTool: 'add', currentShape: 'box', rotationMode: 'visual', gravityScale: 1.0, restitution: 0.1, timeScale: 1.0,
@@ -215,7 +216,6 @@
             initEngine() {
                 this.engine = this.Engine.create({ enableSleeping: true });
                 this.world = this.engine.world;
-                // **FIXED**: Used the correct variable `this.dom.physicsContainer`
                 this.render = this.Render.create({ element: this.dom.physicsContainer, engine: this.engine, options: { width: 700, height: 700, wireframes: false, background: 'transparent' }});
                 const wallOptions = { isStatic: true, label: 'wall', render: { visible: false } };
                 const walls = [ this.Bodies.rectangle(350, 725, 750, 50, wallOptions), this.Bodies.rectangle(350, -25, 750, 50, wallOptions), this.Bodies.rectangle(-25, 350, 50, 750, wallOptions), this.Bodies.rectangle(725, 350, 50, 750, wallOptions)];
@@ -229,7 +229,7 @@
             run() {
                 this.Render.run(this.render);
                 this.Runner.run(this.runner, this.engine);
-                this.updateWorldRotation();
+                this.updateVisualsAndGravity();
             },
 
             SceneManager: {
@@ -363,21 +363,7 @@
                 });
                 this.showToast('💥 BOOM!', 'error');
             },
-
-            calculateCenterOfMass() { const bodies = this.Composite.allBodies(this.world).filter(b => !b.isStatic && b.label !== 'wall'); if (bodies.length === 0) return { x: 350, y: 350 }; let totalMass = 0; let massCenter = { x: 0, y: 0 }; bodies.forEach(b => { totalMass += b.mass; massCenter.x += b.position.x * b.mass; massCenter.y += b.position.y * b.mass; }); return { x: massCenter.x / totalMass, y: massCenter.y / totalMass }; },
-            updateWorldRotation() { 
-                this.engine.gravity.x = this.CONFIG.gravityScale * Math.sin(this.worldAngle); 
-                this.engine.gravity.y = this.CONFIG.gravityScale * Math.cos(this.worldAngle); 
-                if (this.CONFIG.rotationMode === 'visual') { 
-                    const center = this.calculateCenterOfMass(); 
-                    // **FIXED**: Used the correct variable `this.dom.physicsContainer`
-                    this.dom.physicsContainer.style.transformOrigin = `${center.x}px ${center.y}px`; 
-                    this.dom.physicsContainer.style.transform = `rotate(${this.worldAngle * (180 / Math.PI)}deg)`; 
-                } else { 
-                    this.dom.physicsContainer.style.transformOrigin = 'center center'; 
-                    this.dom.physicsContainer.style.transform = 'rotate(0deg)'; 
-                } 
-            },
+            
             clearAll(quiet = false) {
                 if (!quiet && !confirm('你确定要清除画布上所有的物体吗？此操作无法撤销。')) return;
                 this.Composite.clear(this.world, false);
@@ -392,7 +378,13 @@
                 this.SceneManager.init(this);
                 this.dom.toolButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.setActiveTool(e.target.dataset.tool); }});
                 this.dom.shapeButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.CONFIG.currentShape = e.target.dataset.shape; this.dom.shapeButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); }});
-                this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.saveBrowserBtn.onclick = () => this.SceneManager.saveToBrowser(); this.dom.loadBrowserBtn.onclick = () => this.SceneManager.loadFromBrowser(); this.dom.shareSceneBtn.onclick = () => this.SceneManager.share(); this.dom.saveFileBtn.onclick = () => this.SceneManager.saveToFile(); this.dom.loadFileInput.onchange = e => { this.SceneManager.loadFromFile(e.target.files[0]); e.target.value = ''; }; this.dom.clearAllBtn.onclick = () => this.clearAll(); this.dom.rotationModeSelect.onchange = e => { this.CONFIG.rotationMode = e.target.value; this.updateWorldRotation(); }; for(const key in this.dom.sliders) this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key));
+                this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.saveBrowserBtn.onclick = () => this.SceneManager.saveToBrowser(); this.dom.loadBrowserBtn.onclick = () => this.SceneManager.loadFromBrowser(); this.dom.shareSceneBtn.onclick = () => this.SceneManager.share(); this.dom.saveFileBtn.onclick = () => this.SceneManager.saveToFile(); this.dom.loadFileInput.onchange = e => { this.SceneManager.loadFromFile(e.target.files[0]); e.target.value = ''; }; this.dom.clearAllBtn.onclick = () => this.clearAll();
+                this.dom.rotationModeSelect.onchange = e => { 
+                    this.CONFIG.rotationMode = e.target.value; 
+                    // When changing mode, update visuals immediately
+                    this.updateVisualsAndGravity(); 
+                };
+                for(const key in this.dom.sliders) this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key));
                 this.updateUIFromConfig();
                 this.setActiveTool('add');
             },
@@ -413,7 +405,76 @@
             },
 
             updateUIFromConfig() { this.dom.rotationModeSelect.value = this.CONFIG.rotationMode; this.dom.sliders.gravity.value = this.CONFIG.gravityScale; this.dom.values.gravity.textContent = this.CONFIG.gravityScale.toFixed(1); this.dom.sliders.restitution.value = this.CONFIG.restitution; this.dom.values.restitution.textContent = this.CONFIG.restitution.toFixed(2); this.dom.sliders.timescale.value = this.CONFIG.timeScale; this.dom.values.timescale.textContent = this.CONFIG.timeScale.toFixed(1); this.engine.timing.timeScale = this.CONFIG.timeScale; Object.keys(this.CONFIG.friction).forEach(k => { if(this.dom.sliders[`friction_${k}`]) { this.dom.sliders[`friction_${k}`].value = this.CONFIG.friction[k]; this.dom.values[`friction_${k}`].textContent = this.CONFIG.friction[k].toFixed(1); }}); },
-            handleSliderInput(e, key) { const value = parseFloat(e.target.value); const isFriction = key.startsWith('friction'); const prop = isFriction ? key.replace('friction_', '') : (key === 'gravity' ? 'gravityScale' : key); const target = isFriction ? this.CONFIG.friction : this.CONFIG; target[prop] = value; this.dom.values[key].textContent = value.toFixed(key === 'restitution' ? 2 : 1); if(key === 'timeScale') this.engine.timing.timeScale = value; if(key === 'gravityScale') this.updateWorldRotation(); },
+
+            /**
+             * **REWRITTEN**: This function now only syncs the visuals (CSS) and gravity
+             * with the current state of `this.worldAngle`.
+             */
+            updateVisualsAndGravity() {
+                this.engine.gravity.x = this.CONFIG.gravityScale * Math.sin(this.worldAngle);
+                this.engine.gravity.y = this.CONFIG.gravityScale * Math.cos(this.worldAngle);
+
+                if (this.CONFIG.rotationMode === 'visual') {
+                    this.dom.physicsContainer.style.transformOrigin = `${this.BOX_CENTER.x}px ${this.BOX_CENTER.y}px`;
+                    this.dom.physicsContainer.style.transform = `rotate(${this.worldAngle * (180 / Math.PI)}deg)`;
+                } else {
+                    this.dom.physicsContainer.style.transformOrigin = 'center center';
+                    this.dom.physicsContainer.style.transform = 'rotate(0deg)';
+                }
+            },
+
+            /**
+             * **NEW**: Handles the actual physical rotation of all bodies in the world.
+             * @param {number} angleChange - The angle to rotate by, in radians.
+             */
+            rotateWorld(angleChange) {
+                const sin = Math.sin(angleChange);
+                const cos = Math.cos(angleChange);
+                const center = this.BOX_CENTER;
+                
+                const bodies = this.Composite.allBodies(this.world);
+
+                bodies.forEach(body => {
+                    if (body.isStatic) return;
+
+                    const relPos = { x: body.position.x - center.x, y: body.position.y - center.y };
+                    const newPos = {
+                        x: center.x + relPos.x * cos - relPos.y * sin,
+                        y: center.y + relPos.x * sin + relPos.y * cos
+                    };
+                    
+                    const oldVel = body.velocity;
+                    const newVel = {
+                        x: oldVel.x * cos - oldVel.y * sin,
+                        y: oldVel.x * sin + oldVel.y * cos
+                    };
+
+                    const newAngle = body.angle + angleChange;
+
+                    this.Body.setPosition(body, newPos);
+                    this.Body.setVelocity(body, newVel);
+                    this.Body.setAngle(body, newAngle);
+                });
+
+                this.worldAngle += angleChange;
+                this.updateVisualsAndGravity();
+            },
+
+            handleSliderInput(e, key) {
+                const value = parseFloat(e.target.value);
+                const isFriction = key.startsWith('friction');
+                const prop = isFriction ? key.replace('friction_', '') : (key === 'gravity' ? 'gravityScale' : key);
+                const target = isFriction ? this.CONFIG.friction : this.CONFIG;
+                target[prop] = value;
+                this.dom.values[key].textContent = value.toFixed(key === 'restitution' ? 2 : 1);
+                
+                if (key === 'timeScale') {
+                    this.engine.timing.timeScale = value;
+                }
+                if (key === 'gravityScale') {
+                    this.updateVisualsAndGravity();
+                }
+            },
             
             initEvents() {
                 this.Events.on(this.engine, 'beforeUpdate', () => {
@@ -441,12 +502,8 @@
                     }
 
                     switch (this.CONFIG.currentTool) {
-                        case 'add':
-                            if (!body) this.createShape(mousePos.x, mousePos.y);
-                            break;
-                        case 'remove':
-                            if(body) this.Composite.remove(this.world, body);
-                            break;
+                        case 'add': if (!body) this.createShape(mousePos.x, mousePos.y); break;
+                        case 'remove': if(body) this.Composite.remove(this.world, body); break;
                         case 'pin':
                             if(body && body.type === 'body') {
                                 this.Body.setStatic(body, !body.isStatic);
@@ -474,7 +531,6 @@
                     }
                 });
 
-                // **FIXED**: Used the correct variable `this.dom.physicsContainer`
                 this.dom.physicsContainer.addEventListener('contextmenu', e => { 
                     e.preventDefault(); 
                     if (this.linkFirstBody) {
@@ -483,14 +539,30 @@
                     }
                 });
                 
-                window.addEventListener('keydown', e => { if (e.target.matches('input, select')) return; let angleChange = 0; switch(e.key.toLowerCase()) { case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI/2 : 0.05; break; case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI/2 : 0.05); break; case 'escape': this.dom.settingsPanel.style.display = 'none'; this.dom.helpPanelOverlay.style.display = 'none'; break; } if(angleChange) { e.preventDefault(); this.worldAngle += angleChange; this.updateWorldRotation(); } }); 
+                window.addEventListener('keydown', e => {
+                    if (e.target.matches('input, select')) return;
+                    let angleChange = 0;
+                    switch (e.key.toLowerCase()) {
+                        case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI / 2 : 0.05; break;
+                        case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI / 2 : 0.05); break;
+                        case 'escape':
+                            this.dom.settingsPanel.style.display = 'none';
+                            this.dom.helpPanelOverlay.style.display = 'none';
+                            break;
+                    }
+
+                    if (angleChange) {
+                        e.preventDefault();
+                        this.rotateWorld(angleChange);
+                    }
+                }); 
             },
 
             showToast(message, type = 'info', duration = 3000) { const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.textContent = message; this.dom.toastContainer.appendChild(toast); setTimeout(() => { toast.style.animation = 'slideOut 0.5s forwards'; toast.addEventListener('animationend', () => toast.remove()); }, duration); }
         };
 
         PhysicsLab.init();
-        window.lab = PhysicsLab; // For easy debugging
+        window.lab = PhysicsLab;
     });
     </script>
     </body>
