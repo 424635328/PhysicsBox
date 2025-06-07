@@ -3,15 +3,16 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PhysicsLab Ultra (Fixed)</title>
+        <title>PhysicsLab Ultra - Expanded</title>
         <style>
     :root {
         --box-size: 700px;
         --primary-text: #e0e0e0; --secondary-text: #b0b0b0; --background-main: #1a1a1a; --background-panel: #2c2c2c;
         --border-color: #555; --accent-color: #03a9f4; --tool-active-color: #ffab40; --challenge-color: #4caf50;
         --toast-success-bg: rgba(76, 175, 80, 0.9); --toast-error-bg: rgba(211, 47, 47, 0.9); --toast-info-bg: rgba(3, 169, 244, 0.9);
-        /* NEW: Colors for new shapes */
+        /* NEW: Colors for new shapes and tools */
         --teleporter-a-color: #9c27b0; --teleporter-b-color: #ffeb3b; --gravity-zone-color: rgba(76, 175, 80, 0.25);
+        --vortex-color: rgba(103, 58, 183, 0.5);
     }
     body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh;
@@ -24,7 +25,7 @@
     #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; }
     #center-content { display: flex; justify-content: center; }
     
-    #physics-container { width: var(--box-size); height: var(--box-size); border: 3px solid var(--border-color); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease, height 0.3s ease; }
+    #physics-container { width: var(--box-size); height: var(--box-size); border: 3px solid var(--border-color); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease, height 0.3s ease; touch-action: none; }
     canvas { display: block; width: 100%; height: 100%; }
 
     .control-group { background: var(--background-panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
@@ -54,7 +55,7 @@
     .toast.success { background-color: var(--toast-success-bg); } .toast.error { background-color: var(--toast-error-bg); } .toast.info { background-color: var(--toast-info-bg); }
     @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
     #help-panel-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1500; justify-content: center; align-items: center; }
-    #help-panel { position: relative; background: var(--background-panel); padding: 20px 30px; border-radius: 10px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+    #help-panel { position: relative; background: var(--background-panel); padding: 20px 30px; border-radius: 10px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; }
     #help-panel h3 { color: var(--accent-color); } #help-panel ul { padding-left: 20px; } #help-panel li { margin-bottom: 10px; } #help-panel code { background-color: #424242; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
     </style>
     </head>
@@ -65,17 +66,28 @@
             <div id="left-panel">
                 <div class="control-group">
                     <h3>工具 (Tool)</h3>
-                    <div id="tool-buttons" class="grid-buttons">
-                        <button class="tool-btn active"
-                            data-tool="add">添加/拖拽</button>
-                        <button class="tool-btn" data-tool="pin">固定</button>
-                        <button class="tool-btn" data-tool="remove">移除</button>
-                        <button class="tool-btn" data-tool="motor">电机</button>
-                        <button class="tool-btn" data-tool="link">连接</button>
+                    <div id="tool-buttons" class="grid-buttons"
+                        style="grid-template-columns: repeat(3, 1fr);">
+                        <button class="tool-btn active" data-tool="add"
+                            title="添加/拖拽 (Add/Drag)">拖拽</button>
+                        <button class="tool-btn" data-tool="remove"
+                            title="移除 (Remove)">移除</button>
+                        <button class="tool-btn" data-tool="pin"
+                            title="固定/取消固定 (Pin)">固定</button>
+                        <button class="tool-btn" data-tool="link"
+                            title="连接两个物体 (Link)">连接</button>
+                        <button class="tool-btn" data-tool="motor"
+                            title="添加电机 (Motor)">电机</button>
                         <button class="tool-btn" data-tool="push"
-                            title="点击并拖拽物体以施加力">推动</button>
+                            title="点击并拖拽以施加力 (Push)">推动</button>
                         <button class="tool-btn" data-tool="pen"
-                            title="点击并拖拽以绘制静态墙壁">画笔</button>
+                            title="绘制静态墙壁 (Pen)">画笔</button>
+                        <button class="tool-btn" data-tool="eraser"
+                            title="擦除画笔墙壁 (Eraser)">橡皮</button>
+                        <button class="tool-btn" data-tool="scale"
+                            title="滚轮缩放物体 (Scale)">缩放</button>
+                        <button class="tool-btn" data-tool="tuner"
+                            title="调整物体属性 (Tuner)">调整</button>
                     </div>
                 </div>
                 <div class="control-group">
@@ -104,6 +116,8 @@
                             title="依次点击创建成对的传送门">传送门</button>
                         <button class="shape-btn" data-shape="gravityZone"
                             title="创建反重力区域">反重力场</button>
+                        <button class="shape-btn" data-shape="vortex"
+                            title="创建漩涡，吸入并旋转物体">漩涡</button>
                     </div>
                 </div>
             </div>
@@ -197,35 +211,34 @@
             <div id="help-panel">
                 <button id="close-help-btn">×</button>
                 <h2>玩法说明</h2>
-                <h3>基本操作</h3>
+                <h3>基础工具</h3>
                 <ul>
-                    <li><b>工具栏</b>: 在左侧选择一个工具 (Tool) 和一个形状 (Shape)。</li>
-                    <li><b>添加物体</b>: 选择 <code>添加/拖拽</code> 工具，在画布空白处
-                        <b>单击鼠标左键</b>。</li>
-                    <li><b>拖拽物体</b>: 选择 <code>添加/拖拽</code> 工具，<b>按住鼠标左键</b>
-                        拖动物体。</li>
-                    <li><b>使用工具</b>: 选择 <code>移除</code>, <code>固定</code>
-                        等工具后，在目标物体上 <b>单击鼠标左键</b>。</li>
-                    <li><b>电机工具</b>: 在物体上 <b>左键</b> 添加顺时针电机，<b>右键</b>
-                        添加逆时针电机。</li>
-                    <li><b>连接工具</b>: 依次点击两个物体来创建连接。再次点击第一个物体可取消选择。</li>
-                    <li><b>推动工具</b>: 在物体上 <b>按住左键并拖拽</b> 来画出一个力的矢量，<b>松开左键</b>
+                    <li><b>添加/拖拽</b>: 在画布空白处 <b>单击左键</b> 添加当前选中的形状。<b>按住左键</b>
+                        可拖拽已有物体。</li>
+                    <li><b>移除</b>: <b>左键点击</b> 任何物体或连接线可将其移除。</li>
+                    <li><b>固定</b>: <b>左键点击</b> 物体可使其完全固定或取消固定。</li>
+                    <li><b>连接</b>: 依次 <b>左键点击</b> 两个物体来创建柔性连接。</li>
+                    <li><b>电机</b>: <b>左键点击</b> 物体添加顺时针电机，<b>右键</b> 添加逆时针电机。</li>
+                    <li><b>推动</b>: 在物体上 <b>按住左键并拖拽</b> 来画出一个力的矢量，<b>松开左键</b>
                         施加推力。</li>
-                    <li><b>画笔工具</b>: 选择 <code>画笔</code> 工具后，在画布上 <b>按住左键拖拽</b>
-                        来绘制自定义的静态墙壁。</li>
-                    <li><b>平台方向</b>: 创建 <code>平台</code> 时，<b>左键</b>
-                        创建横向平台，<b>右键</b> 创建竖向平台。</li>
-                    <li><b>推进器操作</b>: 创建推进器后，用任意工具 <b>右键点击</b> 来开关推进器。</li>
-                    <li><b>传送门创建</b>: 选择 <code>传送门</code>
-                        形状，在画布上<b>依次点击两次</b>，创建一对互相连接的传送门。</li>
+                </ul>
+                <h3>创意工具 & 形状</h3>
+                <ul>
+                    <li><b>画笔</b>: <b>按住左键拖拽</b> 来绘制自定义的静态墙壁。</li>
+                    <li><b>橡皮</b>: <b>左键点击</b> 由画笔绘制的墙壁来擦除它。</li>
+                    <li><b>缩放</b>: 将鼠标悬停在物体上，使用 <b>鼠标滚轮</b> 放大或缩小它。</li>
+                    <li><b>调整</b>: <b>左键点击</b> 物体增加其弹力，<b>右键点击</b> 减少其弹力。</li>
+                    <li><b>平台</b>: 创建时，<b>左键</b> 为横向，<b>右键</b> 为竖向。</li>
+                    <li><b>推进器</b>: 创建后，用任意工具 <b>右键点击</b> 可开关推进器。</li>
+                    <li><b>传送门</b>: <b>依次左键点击两次</b> 创建一对传送门。右键可取消第一次选择。</li>
+                    <li><b>引力源 / 漩涡</b>: 创建后，它们会自动对范围内的物体施加力。</li>
+                </ul>
+                <h3>通用操作 & 快捷键</h3>
+                <ul>
                     <li><b>旋转世界</b>: 按下 <code>Q</code> / <code>E</code> 键或
                         <code>←</code> / <code>→</code> 方向键。按住
                         <code>Shift</code> 可进行90度旋转。</li>
-                    <li><b>通用右键</b>:
-                        在非特殊操作（如电机、推进器）下，右键可取消“连接”、“推动”、“画笔”等操作。</li>
-                </ul>
-                <h3>高级技巧 (快捷键)</h3>
-                <ul>
+                    <li><b>通用右键</b>: 在非特殊操作下，右键可取消“连接”、“推动”、“画笔”等操作。</li>
                     <li><code>P</code>: 拖拽时**固定 (Pin)**物体。</li>
                     <li><code>D</code>: 悬停时**删除 (Delete)**物体。</li>
                     <li><code>R</code>: **重置 (Reset)**世界旋转和重力。</li>
@@ -253,8 +266,8 @@
             isDrawing: false, penPoints: [],
             teleporterLinkTarget: null,
 
-            CONFIG: { version: "6.1-fixed", currentTool: 'add', currentShape: 'box' },
-            SETTINGS: { boxSize: 700, rotationMode: 'visual', gravityScale: 1.0, restitution: 0.1, timeScale: 1.0, friction: { box_box: 1.0, circle_circle: 1.0, box_circle: 1.0, body_wall: 1.0 }, motorSpeed: 0.2 },
+            CONFIG: { version: "7.0-expanded", currentTool: 'add', currentShape: 'box' },
+            SETTINGS: { boxSize: 700, rotationMode: 'visual', gravityScale: 1.0, restitution: 0.1, timeScale: 1.0, motorSpeed: 0.2 },
             dom: {},
 
             init() { this.cacheDOMElements(); this.initEngine(); this.resize(this.SETTINGS.boxSize); this.initUI(); this.initEvents(); this.run(); },
@@ -279,26 +292,18 @@
                     case 'gear': const gearParams = options.creationParams || { radius: size * 0.8, teeth: 8, toothHeight: size * 0.2 }; const gearVertices = this.createGearVertices(gearParams.radius, gearParams.teeth, gearParams.toothHeight); body = this.Bodies.fromVertices(x, y, [gearVertices], { ...bodyOptions, render: { fillStyle: '#78909c' }}, true); body.creationParams = gearParams; break;
                     case 'thruster': body = this.Bodies.trapezoid(x, y, size*0.8, size*0.8, 0.5, { ...bodyOptions, render: { fillStyle: '#607d8b', strokeStyle: '#cfd8dc', lineWidth: 2 }}); body.isThruster = true; body.isThrusterActive = false; body.thrustForce = 0.005; break;
                     case 'attractor': body = this.Bodies.circle(x, y, size / 3, { ...bodyOptions, isStatic: true, isSensor: true, render: { fillStyle: '#7e57c2', strokeStyle: '#ede7f6', lineWidth: 4 }}); body.isAttractor = true; body.attractionRadius = size * 5; body.attractionForce = 0.0005; break;
+                    case 'vortex': body = this.Bodies.circle(x, y, size / 2.5, { ...bodyOptions, isStatic: true, isSensor: true, render: { fillStyle: getComputedStyle(document.documentElement).getPropertyValue('--vortex-color'), strokeStyle: '#d1c4e9', lineWidth: 2, }}); body.isVortex = true; body.vortexRadius = size * 6; body.vortexInwardForce = 0.0006; body.vortexTangentialForce = 0.00005; break;
                     case 'teleporter':
                         body = this.Bodies.circle(x, y, size / 3, { isStatic: true, isSensor: true, label: 'userBody' });
-                        body.isTeleporter = true;
-                        body.linkedTeleporter = null;
+                        body.isTeleporter = true; body.linkedTeleporter = null;
                         if (!this.teleporterLinkTarget) {
-                            this.teleporterLinkTarget = body;
-                            body.render.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--teleporter-a-color');
-                            this.showToast('入口已创建，请在另一位置创建出口', 'info');
+                            this.teleporterLinkTarget = body; body.render.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--teleporter-a-color'); this.showToast('入口已创建，请在另一位置创建出口', 'info');
                         } else {
-                            body.linkedTeleporter = this.teleporterLinkTarget;
-                            this.teleporterLinkTarget.linkedTeleporter = body;
-                            body.render.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--teleporter-b-color');
-                            this.showToast('传送门已配对！', 'success');
-                            this.teleporterLinkTarget = null;
-                        }
-                        break;
+                            body.linkedTeleporter = this.teleporterLinkTarget; this.teleporterLinkTarget.linkedTeleporter = body; body.render.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--teleporter-b-color'); this.showToast('传送门已配对！', 'success'); this.teleporterLinkTarget = null;
+                        } break;
                     case 'gravityZone':
                         body = this.Bodies.rectangle(x, y, size * 3, size * 3, { isStatic: true, isSensor: true, label: 'userBody', render: { fillStyle: getComputedStyle(document.documentElement).getPropertyValue('--gravity-zone-color'), strokeStyle: '#fff', lineWidth: 1 }});
-                        body.isGravityZone = true;
-                        break;
+                        body.isGravityZone = true; break;
                     default: body = this.Bodies.rectangle(x, y, size, size, bodyOptions); break;
                 }
                 if (body && body.type !== 'composite') { body.shapeType = shapeType; this.Composite.add(this.world, body); }
@@ -306,65 +311,38 @@
                 return body;
             },
             createSoftBody(params) { const { x, y, columns, rows, columnGap, rowGap } = params; const softBody = this.Composites.stack(x - (columns * 10)/2, y - (rows * 10)/2, columns, rows, columnGap, rowGap, (px, py) => this.Bodies.circle(px, py, 5, { friction: 0.1, restitution: 0.4, render: {fillStyle: '#FDD835'}, label: 'userBody' })); this.Composites.mesh(softBody, columns, rows, false, { stiffness: 0.6, render: { type: 'line', visible: true, strokeStyle: 'rgba(255,255,255,0.5)' } }); softBody.shapeType = 'soft'; softBody.label = 'userBody'; softBody.creationParams = params; return softBody; },
-            explode(bomb) { if (bomb.isExploded || !this.Composite.get(this.world, bomb.id, 'body')) return; bomb.isExploded = true; const pos = bomb.position; const radius = this.SETTINGS.boxSize / 4; this.Composite.remove(this.world, bomb); const allBodies = this.Composite.allBodies(this.world); const affectedBodies = this.Query.region(allBodies, { min: { x: pos.x - radius, y: pos.y - radius }, max: { x: pos.x + radius, y: pos.y + radius } }); affectedBodies.forEach(body => { if (body.isStatic || body.isSensor) return; if (body.parent && body.parent.shapeType === 'soft') { if (!body.parent.isBeingRemoved) { body.parent.isBeingRemoved = true; this.removeBodyAndConstraints(body.parent); } } else { this.removeBodyAndConstraints(body); } }); this.showToast('💥 BOOM!', 'error'); },
+            explode(bomb) { if (bomb.isExploded || !this.Composite.get(this.world, bomb.id, 'body')) return; bomb.isExploded = true; const pos = bomb.position; const radius = this.SETTINGS.boxSize / 4; this.removeBodyAndConstraints(bomb); const allBodies = this.Composite.allBodies(this.world); const affectedBodies = this.Query.region(allBodies, { min: { x: pos.x - radius, y: pos.y - radius }, max: { x: pos.x + radius, y: pos.y + radius } }); affectedBodies.forEach(body => { if (body.isStatic || body.isSensor) return; if (body.parent && body.parent.shapeType === 'soft') { if (!body.parent.isBeingRemoved) { body.parent.isBeingRemoved = true; this.removeBodyAndConstraints(body.parent); } } else { this.removeBodyAndConstraints(body); } }); this.showToast('💥 BOOM!', 'error'); },
             clearAll(quiet = false) { if (!quiet && !confirm('你确定要清除画布上所有的物体吗？此操作无法撤销。')) return; this.Composite.clear(this.world, false); this.initEngine(); this.Runner.run(this.runner, this.engine); this.resize(this.SETTINGS.boxSize); this.teleporterLinkTarget = null; if (!quiet) this.showToast('已清空画布', 'info'); },
-            // *** FIX 1: NEW HELPER FUNCTION to remove a body and its associated constraints ***
             removeBodyAndConstraints(body) {
-                if (!body || !this.Composite.get(this.world, body.id, body.type)) {
-                    return; // Do nothing if body is invalid or not in world
-                }
-            
-                // Find all constraints connected to this body (or any of its parts)
+                if (!body || !this.Composite.get(this.world, body.id, body.type)) return;
                 const allConstraints = this.Composite.allConstraints(this.world);
                 const bodyIds = (body.parts || [body]).map(p => p.id);
-
-                const constraintsToRemove = allConstraints.filter(c => 
-                    (c.bodyA && bodyIds.includes(c.bodyA.id)) || 
-                    (c.bodyB && bodyIds.includes(c.bodyB.id))
-                );
-
-                // Remove the identified constraints
+                const constraintsToRemove = allConstraints.filter(c => (c.bodyA && bodyIds.includes(c.bodyA.id)) || (c.bodyB && bodyIds.includes(c.bodyB.id)));
                 constraintsToRemove.forEach(c => this.Composite.remove(this.world, c));
-
-                // Finally, remove the body itself
                 this.Composite.remove(this.world, body);
             },
-            cacheDOMElements() { const ids = [ 'physics-container', 'settings-panel', 'help-panel-overlay', 'help-panel', 'toast-container', 'tool-buttons', 'shape-buttons', 'challenge-select', 'challenge-description', 'win-message', 'settings-btn', 'help-btn', 'close-settings-btn', 'close-help-btn', 'save-browser-btn', 'load-browser-btn', 'share-scene-btn', 'save-file-btn', 'load-file-input', 'clear-all-btn', 'rotation-mode-select' ]; ids.forEach(id => { this.dom[id.replace(/-(\w)/g, (m, p1) => p1.toUpperCase())] = document.getElementById(id); }); const sliders = ['box-size', 'gravity', 'restitution', 'timescale', 'friction-box_box', 'friction-circle_circle', 'friction-box_circle', 'friction-body_wall']; this.dom.sliders = {}; this.dom.values = {}; sliders.forEach(s => { const id = s.replace(/-/g, '_'); this.dom.sliders[id] = document.getElementById(`${s}-slider`); this.dom.values[id] = document.getElementById(`${s}-value`); }); },
+            cacheDOMElements() { const ids = [ 'physics-container', 'settings-panel', 'help-panel-overlay', 'help-panel', 'toast-container', 'tool-buttons', 'shape-buttons', 'challenge-select', 'challenge-description', 'win-message', 'settings-btn', 'help-btn', 'close-settings-btn', 'close-help-btn', 'save-browser-btn', 'load-browser-btn', 'share-scene-btn', 'save-file-btn', 'load-file-input', 'clear-all-btn', 'rotation-mode-select' ]; ids.forEach(id => { this.dom[id.replace(/-(\w)/g, (m, p1) => p1.toUpperCase())] = document.getElementById(id); }); const sliders = ['box-size', 'gravity', 'restitution', 'timescale']; this.dom.sliders = {}; this.dom.values = {}; sliders.forEach(s => { const id = s.replace(/-/g, '_'); this.dom.sliders[id] = document.getElementById(`${s}-slider`); this.dom.values[id] = document.getElementById(`${s}-value`); }); },
             initUI() { this.dom.toolButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.setActiveTool(e.target.dataset.tool); }}); this.dom.shapeButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.CONFIG.currentShape = e.target.dataset.shape; this.dom.shapeButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); this.teleporterLinkTarget = null; }}); this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.clearAllBtn.onclick = () => this.clearAll(); this.dom.rotationModeSelect.onchange = e => { this.SETTINGS.rotationMode = e.target.value; this.updateVisualsAndGravity(); }; this.dom.sliders.box_size.addEventListener('input', e => { this.dom.values.box_size.textContent = e.target.value; }); this.dom.sliders.box_size.addEventListener('change', e => { this.resize(parseInt(e.target.value, 10)); }); for(const key in this.dom.sliders) { if (key !== 'box_size' && this.dom.sliders[key]) { this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key)); } } this.updateUIFromConfig(); this.setActiveTool('add'); },
             setActiveTool(tool) { this.CONFIG.currentTool = tool; this.dom.toolButtons.querySelector('.active')?.classList.remove('active'); this.dom.toolButtons.querySelector(`[data-tool=${tool}]`).classList.add('active'); this.linkFirstBody = null; this.teleporterLinkTarget = null; this.isDrawing = false; this.penPoints = []; if (tool === 'add') { this.mouseConstraint.collisionFilter.mask = 0xFFFFFFFF; this.render.canvas.style.cursor = 'grab'; } else { this.mouseConstraint.collisionFilter.mask = 0x0000; this.render.canvas.style.cursor = 'crosshair'; } },
-            updateUIFromConfig() { this.resize(this.SETTINGS.boxSize); this.dom.rotationModeSelect.value = this.SETTINGS.rotationMode; this.dom.sliders.gravity.value = this.SETTINGS.gravityScale; this.dom.values.gravity.textContent = this.SETTINGS.gravityScale.toFixed(1); this.dom.sliders.restitution.value = this.SETTINGS.restitution; this.dom.values.restitution.textContent = this.SETTINGS.restitution.toFixed(2); this.dom.sliders.timescale.value = this.SETTINGS.timeScale; this.dom.values.timescale.textContent = this.SETTINGS.timeScale.toFixed(1); this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; Object.keys(this.SETTINGS.friction).forEach(k => { if(this.dom.sliders[`friction_${k}`]) { this.dom.sliders[`friction_${k}`].value = this.SETTINGS.friction[k]; this.dom.values[`friction_${k}`].textContent = this.SETTINGS.friction[k].toFixed(1); }}); },
+            updateUIFromConfig() { this.resize(this.SETTINGS.boxSize); this.dom.rotationModeSelect.value = this.SETTINGS.rotationMode; this.dom.sliders.gravity.value = this.SETTINGS.gravityScale; this.dom.values.gravity.textContent = this.SETTINGS.gravityScale.toFixed(1); this.dom.sliders.restitution.value = this.SETTINGS.restitution; this.dom.values.restitution.textContent = this.SETTINGS.restitution.toFixed(2); this.dom.sliders.timescale.value = this.SETTINGS.timeScale; this.dom.values.timescale.textContent = this.SETTINGS.timeScale.toFixed(1); this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; },
             updateVisualsAndGravity() { this.engine.gravity.x = this.SETTINGS.gravityScale * Math.sin(this.worldAngle); this.engine.gravity.y = this.SETTINGS.gravityScale * Math.cos(this.worldAngle); if (this.SETTINGS.rotationMode === 'visual') { this.dom.physicsContainer.style.transformOrigin = `${this.BOX_CENTER.x}px ${this.BOX_CENTER.y}px`; this.dom.physicsContainer.style.transform = `rotate(${this.worldAngle * (180 / Math.PI)}deg)`; } else { this.dom.physicsContainer.style.transformOrigin = 'center center'; this.dom.physicsContainer.style.transform = 'rotate(0deg)'; } },
             rotateWorld(angleChange) { const sin = Math.sin(angleChange); const cos = Math.cos(angleChange); const center = this.BOX_CENTER; const bodies = this.Composite.allBodies(this.world); bodies.forEach(body => { if (body.isStatic) return; const relPos = { x: body.position.x - center.x, y: body.position.y - center.y }; const newPos = { x: center.x + relPos.x * cos - relPos.y * sin, y: center.y + relPos.x * sin + relPos.y * cos }; const oldVel = body.velocity; const newVel = { x: oldVel.x * cos - oldVel.y * sin, y: oldVel.x * sin + oldVel.y * cos }; const newAngle = body.angle + angleChange; this.Body.setPosition(body, newPos); this.Body.setVelocity(body, newVel); this.Body.setAngle(body, newAngle); }); this.worldAngle += angleChange; this.updateVisualsAndGravity(); },
-            handleSliderInput(e, key) { const value = parseFloat(e.target.value); const isFriction = key.startsWith('friction'); const prop = isFriction ? key.replace('friction_', '') : (key === 'gravity' ? 'gravityScale' : key); const target = isFriction ? this.SETTINGS.friction : this.SETTINGS; target[prop] = value; this.dom.values[key].textContent = value.toFixed(key === 'restitution' ? 2 : 1); if (key === 'timeScale') { this.SETTINGS.timeScale = value; if (!this.isPaused) { this.engine.timing.timeScale = value; } } if (key === 'gravityScale') { this.updateVisualsAndGravity(); } },
+            handleSliderInput(e, key) { const value = parseFloat(e.target.value); const prop = key === 'gravity' ? 'gravityScale' : key; this.SETTINGS[prop] = value; this.dom.values[key].textContent = value.toFixed(key === 'restitution' ? 2 : 1); if (key === 'timeScale') { this.SETTINGS.timeScale = value; if (!this.isPaused) { this.engine.timing.timeScale = value; } } if (key === 'gravityScale') { this.updateVisualsAndGravity(); } },
             initEvents() {
                 this.Events.on(this.engine, 'beforeUpdate', () => {
                     const bodies = this.Composite.allBodies(this.world);
                     const attractors = bodies.filter(b => b.isAttractor);
+                    const vortices = bodies.filter(b => b.isVortex);
                     const gravityZones = bodies.filter(b => b.isGravityZone);
+
                     for (const body of bodies) {
                         if (body.isStatic || body.isSensor) { if (body.teleportCooldown > 0) body.teleportCooldown--; continue; }
                         if (body.motorDirection) this.Body.setAngularVelocity(body, this.SETTINGS.motorSpeed * body.motorDirection);
                         if (body.isThruster && body.isThrusterActive) { const forceMagnitude = body.thrustForce * this.SETTINGS.timeScale; const force = { x: Math.sin(body.angle) * forceMagnitude, y: -Math.cos(body.angle) * forceMagnitude }; this.Body.applyForce(body, body.position, force); }
                         
-                        // *** FIX 2: REVISED ATTRACTOR LOGIC ***
-                        attractors.forEach(attractor => {
-                            if (body === attractor) return; // An attractor should not attract itself
-                            
-                            const vec = {x: attractor.position.x - body.position.x, y: attractor.position.y - body.position.y};
-                            const distSq = vec.x * vec.x + vec.y * vec.y;
-                            
-                            if (distSq > 1 && distSq < attractor.attractionRadius * attractor.attractionRadius) {
-                                // The original formula (dividing by distSq) caused force to diminish too quickly.
-                                // This revised formula normalizes the direction vector and applies a consistent force.
-                                const dist = Math.sqrt(distSq);
-                                const forceMagnitude = attractor.attractionForce * body.mass;
-                                const force = {
-                                    x: (vec.x / dist) * forceMagnitude,
-                                    y: (vec.y / dist) * forceMagnitude
-                                };
-                                this.Body.applyForce(body, body.position, force);
-                            }
-                        });
+                        attractors.forEach(attractor => { if (body === attractor) return; const vec = {x: attractor.position.x - body.position.x, y: attractor.position.y - body.position.y}; const distSq = vec.x * vec.x + vec.y * vec.y; if (distSq > 1 && distSq < attractor.attractionRadius * attractor.attractionRadius) { const dist = Math.sqrt(distSq); const forceMag = attractor.attractionForce * body.mass; const force = { x: (vec.x / dist) * forceMag, y: (vec.y / dist) * forceMag }; this.Body.applyForce(body, body.position, force); }});
+                        
+                        vortices.forEach(vortex => { if (body === vortex) return; const vec = {x: vortex.position.x - body.position.x, y: vortex.position.y - body.position.y}; const distSq = vec.x * vec.x + vec.y * vec.y; if (distSq > 1 && distSq < vortex.vortexRadius * vortex.vortexRadius) { const dist = Math.sqrt(distSq); const inwardForceMag = vortex.vortexInwardForce * body.mass; const inwardForce = { x: (vec.x / dist) * inwardForceMag, y: (vec.y / dist) * inwardForceMag }; const tangentialForce = { x: -vec.y / dist * vortex.vortexTangentialForce * body.mass * dist, y: vec.x / dist * vortex.vortexTangentialForce * body.mass * dist }; this.Body.applyForce(body, body.position, inwardForce); this.Body.applyForce(body, body.position, tangentialForce); }});
 
                         let inZone = false;
                         for (const zone of gravityZones) { if (this.Bounds.contains(zone.bounds, body.position)) { inZone = true; break; } }
@@ -373,32 +351,23 @@
                     }
                 });
 
-                this.Events.on(this.render, 'afterRender', (event) => {
-                    const context = event.source.context;
-                    if (this.pushStartPos && this.pushEndPos) { context.beginPath(); context.moveTo(this.pushStartPos.x, this.pushStartPos.y); context.lineTo(this.pushEndPos.x, this.pushEndPos.y); context.strokeStyle = 'rgba(255, 171, 64, 0.8)'; context.lineWidth = 3; context.stroke(); }
-                    if (this.isDrawing && this.penPoints.length > 1) { context.beginPath(); context.moveTo(this.penPoints[0].x, this.penPoints[0].y); for (let i = 1; i < this.penPoints.length; i++) { context.lineTo(this.penPoints[i].x, this.penPoints[i].y); } context.strokeStyle = 'rgba(3, 169, 244, 0.7)'; context.lineWidth = 4; context.stroke(); }
-                });
+                this.Events.on(this.render, 'afterRender', (event) => { const context = event.source.context; if (this.pushStartPos && this.pushEndPos) { context.beginPath(); context.moveTo(this.pushStartPos.x, this.pushStartPos.y); context.lineTo(this.pushEndPos.x, this.pushEndPos.y); context.strokeStyle = 'rgba(255, 171, 64, 0.8)'; context.lineWidth = 3; context.stroke(); } if (this.isDrawing && this.penPoints.length > 1) { context.beginPath(); context.moveTo(this.penPoints[0].x, this.penPoints[0].y); for (let i = 1; i < this.penPoints.length; i++) { context.lineTo(this.penPoints[i].x, this.penPoints[i].y); } context.strokeStyle = 'rgba(3, 169, 244, 0.7)'; context.lineWidth = 4; context.stroke(); } });
                 
-                this.Events.on(this.engine, 'collisionStart', (event) => {
-                    event.pairs.forEach(pair => {
-                        const checkTeleport = (teleporter, otherBody) => { if (otherBody.isSensor || otherBody.isStatic || otherBody.teleportCooldown > 0 || !teleporter.linkedTeleporter) return; otherBody.teleportCooldown = 20; teleporter.linkedTeleporter.teleportCooldown = 20; const dest = teleporter.linkedTeleporter.position; const vel = otherBody.velocity; const angVel = otherBody.angularVelocity; this.Body.setPosition(otherBody, { x: dest.x, y: dest.y }); this.Body.setVelocity(otherBody, vel); this.Body.setAngularVelocity(otherBody, angVel); };
-                        if (pair.bodyA.isTeleporter) checkTeleport(pair.bodyA, pair.bodyB);
-                        if (pair.bodyB.isTeleporter) checkTeleport(pair.bodyB, pair.bodyA);
-                    });
-                });
+                this.Events.on(this.engine, 'collisionStart', (event) => { event.pairs.forEach(pair => { const checkTeleport = (teleporter, otherBody) => { if (otherBody.isSensor || otherBody.isStatic || otherBody.teleportCooldown > 0 || !teleporter.linkedTeleporter) return; otherBody.teleportCooldown = 20; teleporter.linkedTeleporter.teleportCooldown = 20; const dest = teleporter.linkedTeleporter.position; const vel = otherBody.velocity; const angVel = otherBody.angularVelocity; this.Body.setPosition(otherBody, { x: dest.x, y: dest.y }); this.Body.setVelocity(otherBody, vel); this.Body.setAngularVelocity(otherBody, angVel); }; if (pair.bodyA.isTeleporter) checkTeleport(pair.bodyA, pair.bodyB); if (pair.bodyB.isTeleporter) checkTeleport(pair.bodyB, pair.bodyA); }); });
 
                 this.render.canvas.addEventListener('mousedown', (event) => {
-                    if (event.button !== 0) return;
+                    if (event.button !== 0) return; // Only handle left-click
                     const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos);
                     switch (this.CONFIG.currentTool) {
                         case 'add': if (!body) this.createShape(mousePos.x, mousePos.y); break;
-                        // *** FIX 1: Use the new helper function for removal ***
                         case 'remove': if(body) this.removeBodyAndConstraints(body); break;
                         case 'pin': this.togglePin(body); break;
                         case 'motor': this.toggleMotor(body, 1); break;
                         case 'link': this.handleLinkTool(body); break;
                         case 'push': if (body && !body.isStatic) { this.pushStartPos = { ...mousePos }; this.pushEndPos = { ...mousePos }; this.pushTargetBody = body; } break;
                         case 'pen': this.isDrawing = true; this.penPoints = [{...mousePos}]; break;
+                        case 'eraser': if (body && body.shapeType === 'penWall') { this.removeBodyAndConstraints(body); } break;
+                        case 'tuner': if (body && !body.isStatic) { body.restitution = Math.min(1.5, body.restitution + 0.1); this.showToast(`弹力 (Bounciness): ${body.restitution.toFixed(2)}`, 'info', 1000); } break;
                     }
                 });
                 
@@ -414,6 +383,7 @@
                     e.preventDefault();
                     const mousePos = this.mouseConstraint.mouse.position; const body = this.getBodyAt(mousePos);
                     if (this.CONFIG.currentTool === 'motor') { this.toggleMotor(body, -1); return; }
+                    if (this.CONFIG.currentTool === 'tuner' && body && !body.isStatic) { body.restitution = Math.max(0, body.restitution - 0.1); this.showToast(`弹力 (Bounciness): ${body.restitution.toFixed(2)}`, 'info', 1000); return; }
                     if (body && body.isThruster) { this.toggleThruster(body); return; }
                     if (!body && this.CONFIG.currentTool === 'add' && this.CONFIG.currentShape === 'platform') { this.createShape(mousePos.x, mousePos.y, 'platform', { angle: Math.PI / 2 }); return; }
                     if (this.linkFirstBody) { this.linkFirstBody = null; this.showToast('已取消连接操作', 'info'); }
@@ -422,10 +392,20 @@
                     if (this.teleporterLinkTarget) { this.Composite.remove(this.world, this.teleporterLinkTarget); this.teleporterLinkTarget = null; this.showToast('已取消传送门配对', 'info'); }
                 });
                 
-                window.addEventListener('keydown', e => { if (e.target.matches('input, select')) return; const mousePos = this.mouseConstraint.mouse.position; const bodyUnderMouse = this.getBodyAt(mousePos); let angleChange = 0; switch (e.key.toLowerCase()) { case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI / 2 : 0.05; break; case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI / 2 : 0.05); break; case 'c': e.preventDefault(); this.clearAll(); break; case 'r': e.preventDefault(); this.rotateWorld(-this.worldAngle); this.showToast('世界旋转已重置', 'info'); break; case ' ': e.preventDefault(); this.isPaused = !this.isPaused; this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; this.showToast(this.isPaused ? '已暂停' : '已继续', 'info'); break; 
-                    // *** FIX 1: Use the new helper function for removal ***
-                    case 'd': if (bodyUnderMouse) { e.preventDefault(); this.removeBodyAndConstraints(bodyUnderMouse); this.showToast('物体已删除!', 'info'); } break; 
-                    case 'p': if (this.mouseConstraint.body && !this.mouseConstraint.body.isStatic) { e.preventDefault(); this.togglePin(this.mouseConstraint.body); this.mouseConstraint.body = null; } break; case 'escape': this.dom.settingsPanel.style.display = 'none'; this.dom.helpPanelOverlay.style.display = 'none'; break; } if (angleChange) { e.preventDefault(); this.rotateWorld(angleChange); } });
+                this.render.canvas.addEventListener('wheel', e => {
+                    if (this.CONFIG.currentTool !== 'scale') return;
+                    e.preventDefault();
+                    const mousePos = this.mouseConstraint.mouse.position;
+                    const body = this.getBodyAt(mousePos);
+                    if (body && !body.isStatic) {
+                        const scaleFactor = e.deltaY < 0 ? 1.05 : 0.95;
+                        this.Body.scale(body, scaleFactor, scaleFactor);
+                        // To keep density constant, adjust mass by square of scale factor
+                        this.Body.setMass(body, body.mass * scaleFactor * scaleFactor);
+                    }
+                }, { passive: false });
+
+                window.addEventListener('keydown', e => { if (e.target.matches('input, select')) return; const mousePos = this.mouseConstraint.mouse.position; const bodyUnderMouse = this.getBodyAt(mousePos); let angleChange = 0; switch (e.key.toLowerCase()) { case 'e': case 'arrowright': angleChange = e.shiftKey ? Math.PI / 2 : 0.05; break; case 'q': case 'arrowleft': angleChange = -(e.shiftKey ? Math.PI / 2 : 0.05); break; case 'c': e.preventDefault(); this.clearAll(); break; case 'r': e.preventDefault(); this.rotateWorld(-this.worldAngle); this.showToast('世界旋转已重置', 'info'); break; case ' ': e.preventDefault(); this.isPaused = !this.isPaused; this.engine.timing.timeScale = this.isPaused ? 0 : this.SETTINGS.timeScale; this.showToast(this.isPaused ? '已暂停' : '已继续', 'info'); break; case 'd': if (bodyUnderMouse) { e.preventDefault(); this.removeBodyAndConstraints(bodyUnderMouse); this.showToast('物体已删除!', 'info'); } break; case 'p': if (this.mouseConstraint.body && !this.mouseConstraint.body.isStatic) { e.preventDefault(); this.togglePin(this.mouseConstraint.body); this.mouseConstraint.body = null; } break; case 'escape': this.dom.settingsPanel.style.display = 'none'; this.dom.helpPanelOverlay.style.display = 'none'; break; } if (angleChange) { e.preventDefault(); this.rotateWorld(angleChange); } });
             },
             getBodyAt(position) { const bodiesUnderMouse = this.Query.point(this.Composite.allBodies(this.world), position); const userBodies = bodiesUnderMouse.filter(b => b.label === 'userBody' || (b.parent && b.parent.label === 'userBody')); if (userBodies.length === 0) return null; const softBodyParent = userBodies.find(b => b.parent && b.parent.shapeType === 'soft'); return softBodyParent ? softBodyParent.parent : userBodies.reduce((p, c) => ((c.area || 1) < (p.area || 1)) ? c : p); },
             handleLinkTool(body) { if(body && body.type === 'body') { if(!this.linkFirstBody) { this.linkFirstBody = body; this.showToast('已选择第一个物体，请选择第二个', 'info'); } else if(this.linkFirstBody !== body) { const c = this.Constraint.create({bodyA:this.linkFirstBody, bodyB:body, stiffness:0.1, label:'userConstraint', render: { strokeStyle: '#fff', lineWidth: 2 }}); this.Composite.add(this.world, c); this.linkFirstBody = null; } else { this.linkFirstBody = null; this.showToast('已取消连接操作', 'info'); } } },
