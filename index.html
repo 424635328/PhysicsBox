@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>终极物理实验室 3.0 (旋转逻辑修正)</title>
+        <title>终极物理实验室 3.0 (场景管理修正版)</title>
         <style>
         :root {
             --box-size: 700px; --primary-text: #e0e0e0; --secondary-text: #b0b0b0; --background-main: #1a1a1a; --background-panel: #2c2c2c;
@@ -17,7 +17,28 @@
         }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        #main-container { display: flex; align-items: flex-start; gap: 30px; padding: 20px; }
+        #main-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr 220px;
+            align-items: flex-start;
+            gap: 30px;
+            padding: 20px;
+            width: 100%;
+            max-width: 1400px;
+            box-sizing: border-box;
+        }
+
+        #left-panel, #right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #center-content {
+            display: flex;
+            justify-content: center;
+        }
+        
         #physics-container {
             width: var(--box-size); height: var(--box-size); border: 3px solid var(--border-color);
             position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5);
@@ -25,24 +46,24 @@
         }
         canvas { display: block; width: 100%; height: 100%; }
 
-        .controls-panel { display: flex; flex-direction: column; gap: 15px; width: 220px; }
         .control-group { background: var(--background-panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
         .control-group h3 { margin: 0 0 15px 0; text-align: center; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
         .grid-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         button, select {
             background: #424242; color: var(--primary-text); border: 2px solid var(--border-color); border-radius: 5px; padding: 10px;
             cursor: pointer; font-size: 14px; transition: all 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
         }
         button:hover, select:hover { border-color: var(--accent-color); background: #555; }
         .grid-buttons button.active { border-color: var(--tool-active-color); background: #616161; box-shadow: 0 0 8px var(--tool-active-color); transform: scale(1.05); }
         
+        #app-actions-group .grid-buttons button {
+            font-size: 16px;
+        }
+
         #challenge-description { font-size: 12px; color: var(--secondary-text); margin-top: 10px; min-height: 40px; }
         #win-message { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; background: rgba(76, 175, 80, 0.9); color: white; border-radius: 10px; font-size: 32px; font-weight: bold; z-index: 500; }
-
-        #settings-btn, #help-btn { position: absolute; z-index: 100; background: none; border: none; font-size: 24px; color: #fff; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
-        #settings-btn { top: 10px; right: 10px; }
-        #help-btn { bottom: 10px; right: 10px; }
-        #settings-btn:hover, #help-btn:hover { opacity: 1; }
 
         #settings-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: var(--background-panel); padding: 20px; border-radius: 10px; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
         #settings-panel h2 { margin-top: 0; color: var(--accent-color); }
@@ -70,41 +91,55 @@
     </head>
     <body>
         <div id="toast-container"></div>
-        <div id="main-container">
-            <div class="controls-panel">
-                <div class="control-group"><h3>工具 (Tool)</h3><div
-                        id="tool-buttons" class="grid-buttons"><button
-                            class="tool-btn active"
-                            data-tool="add">添加/拖拽</button><button
-                            class="tool-btn"
-                            data-tool="pin">固定</button><button class="tool-btn"
-                            data-tool="remove">移除</button><button
-                            class="tool-btn"
-                            data-tool="motor">电机</button><button
-                            class="tool-btn"
-                            data-tool="link">连接</button></div></div>
-                <div class="control-group"><h3>形状 (Shape)</h3><div
-                        id="shape-buttons" class="grid-buttons"><button
-                            class="shape-btn active"
-                            data-shape="box">方块</button><button
-                            class="shape-btn"
-                            data-shape="circle">圆形</button><button
-                            class="shape-btn"
-                            data-shape="bomb">炸弹</button><button
-                            class="shape-btn"
-                            data-shape="soft">柔性体</button></div></div>
-                <div class="control-group"><h3>挑战 (Challenges)</h3><label
-                        for="challenge-select">开始一个挑战:</label><select
-                        id="challenge-select"><option value>-- 自由模式
-                            --</option></select><p
-                        id="challenge-description">欢迎！这里是自由沙盒模式。尽情创造吧！</p></div>
+        
+        <div id="main-layout">
+            <div id="left-panel">
+                <div class="control-group">
+                    <h3>工具 (Tool)</h3>
+                    <div id="tool-buttons" class="grid-buttons">
+                        <button class="tool-btn active" data-tool="add">添加/拖拽</button>
+                        <button class="tool-btn" data-tool="pin">固定</button>
+                        <button class="tool-btn" data-tool="remove">移除</button>
+                        <button class="tool-btn" data-tool="motor">电机</button>
+                        <button class="tool-btn" data-tool="link">连接</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3>形状 (Shape)</h3>
+                    <div id="shape-buttons" class="grid-buttons">
+                        <button class="shape-btn active" data-shape="box">方块</button>
+                        <button class="shape-btn" data-shape="circle">圆形</button>
+                        <button class="shape-btn" data-shape="bomb">炸弹</button>
+                        <button class="shape-btn" data-shape="soft">柔性体</button>
+                    </div>
+                </div>
             </div>
-            <div id="physics-container">
-                <button id="settings-btn" title="打开高级设置">⚙️</button>
-                <button id="help-btn" title="打开帮助说明">❓</button>
-                <div id="win-message">挑战成功!</div>
+
+            <div id="center-content">
+                <div id="physics-container">
+                    <div id="win-message">挑战成功!</div>
+                </div>
+            </div>
+
+            <div id="right-panel">
+                 <div id="app-actions-group" class="control-group">
+                    <h3>操作</h3>
+                    <div class="grid-buttons">
+                        <button id="settings-btn" title="打开高级设置">高级设置 ⚙️</button>
+                        <button id="help-btn" title="打开帮助说明">帮助说明 ❓</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3>挑战 (Challenges)</h3>
+                    <label for="challenge-select">开始一个挑战:</label>
+                    <select id="challenge-select">
+                        <option value>-- 自由模式 --</option>
+                    </select>
+                    <p id="challenge-description">欢迎！这里是自由沙盒模式。尽情创造吧！</p>
+                </div>
             </div>
         </div>
+
         <div id="settings-panel">
             <button id="close-settings-btn" title="关闭">×</button>
             <h2>高级设置</h2>
@@ -198,7 +233,15 @@
             BOX_CENTER: { x: 350, y: 350 },
 
             CONFIG: {
-                version: "3.0", currentTool: 'add', currentShape: 'box', rotationMode: 'visual', gravityScale: 1.0, restitution: 0.1, timeScale: 1.0,
+                version: "3.0",
+                currentTool: 'add',
+                currentShape: 'box',
+            },
+            SETTINGS: {
+                rotationMode: 'visual',
+                gravityScale: 1.0,
+                restitution: 0.1,
+                timeScale: 1.0,
                 friction: { box_box: 1.0, circle_circle: 1.0, box_circle: 1.0, body_wall: 1.0 },
                 motorSpeed: 0.2
             },
@@ -236,8 +279,13 @@
                 parent: null,
                 init(parent) { this.parent = parent; },
                 serialize() {
+                    const sceneData = {
+                        version: this.parent.CONFIG.version,
+                        settings: this.parent.SETTINGS,
+                        objects: [],
+                        constraints: []
+                    };
                     const processedBodyIds = new Set();
-                    const sceneData = { version: this.parent.CONFIG.version, settings: { ...this.parent.CONFIG }, objects: [], constraints: [] };
                     this.parent.Composite.allComposites(this.parent.world).forEach(c => {
                         if (c.shapeType === 'soft' && c.creationParams) {
                             sceneData.objects.push({ shapeType: 'soft', creationParams: c.creationParams });
@@ -260,9 +308,19 @@
                     try {
                         const sceneData = JSON.parse(jsonString);
                         if (!sceneData.version) throw new Error("无效的场景格式 (无版本信息)");
+                        
                         this.parent.clearAll(true);
-                        Object.assign(this.parent.CONFIG, sceneData.settings);
+                        
+                        this.parent.SETTINGS = {
+                            ...this.parent.SETTINGS,
+                            ...sceneData.settings,
+                            friction: {
+                                ...this.parent.SETTINGS.friction,
+                                ...(sceneData.settings.friction || {})
+                            }
+                        };
                         this.parent.updateUIFromConfig();
+
                         const idMap = new Map();
                         sceneData.objects.forEach(data => {
                             let newObject;
@@ -311,7 +369,7 @@
             createShape(x, y, shapeType = this.CONFIG.currentShape, options = {}, playSound = true) {
                 const size = 700 / 12;
                 const defaultRender = { fillStyle: '#03a9f4', strokeStyle: '#e0e0e0', lineWidth: 0 };
-                const bodyOptions = { restitution: this.CONFIG.restitution, label: 'userBody', render: defaultRender, ...options };
+                const bodyOptions = { restitution: this.SETTINGS.restitution, label: 'userBody', render: defaultRender, ...options };
                 let body;
                 switch (shapeType) {
                     case 'circle': body = this.Bodies.circle(x, y, size / 2, bodyOptions); break;
@@ -372,19 +430,52 @@
                 if (!quiet) this.showToast('已清空画布', 'info');
             },
             
-            cacheDOMElements() { const ids = [ 'physics-container', 'settings-panel', 'help-panel-overlay', 'help-panel', 'toast-container', 'tool-buttons', 'shape-buttons', 'challenge-select', 'challenge-description', 'win-message', 'settings-btn', 'help-btn', 'close-settings-btn', 'close-help-btn', 'save-browser-btn', 'load-browser-btn', 'share-scene-btn', 'save-file-btn', 'load-file-input', 'clear-all-btn', 'rotation-mode-select' ]; ids.forEach(id => this.dom[id.replace(/-(\w)/g, (m, p1) => p1.toUpperCase())] = document.getElementById(id)); const sliders = ['gravity', 'restitution', 'timescale', 'friction-box_box', 'friction-circle_circle', 'friction-box_circle', 'friction-body_wall']; this.dom.sliders = {}; this.dom.values = {}; sliders.forEach(s => { const id = s.replace('-', '_'); this.dom.sliders[id] = document.getElementById(s.includes('-') ? s : `${s}-slider`); this.dom.values[id] = document.getElementById(`${s}-value`); }); },
+            cacheDOMElements() {
+                const ids = [
+                    'physics-container', 'settings-panel', 'help-panel-overlay', 'help-panel', 'toast-container',
+                    'tool-buttons', 'shape-buttons', 'challenge-select', 'challenge-description', 'win-message',
+                    'settings-btn', 'help-btn', 'close-settings-btn', 'close-help-btn',
+                    'save-browser-btn', 'load-browser-btn', 'share-scene-btn', 'save-file-btn',
+                    'load-file-input', 'clear-all-btn', 'rotation-mode-select'
+                ];
+                ids.forEach(id => {
+                    this.dom[id.replace(/-(\w)/g, (m, p1) => p1.toUpperCase())] = document.getElementById(id);
+                });
+                const sliders = ['gravity', 'restitution', 'timescale', 'friction-box_box', 'friction-circle_circle', 'friction-box_circle', 'friction-body_wall'];
+                this.dom.sliders = {};
+                this.dom.values = {};
+                sliders.forEach(s => {
+                    const id = s.replace('-', '_');
+                    this.dom.sliders[id] = document.getElementById(s.includes('-') ? s : `${s}-slider`);
+                    this.dom.values[id] = document.getElementById(`${s}-value`);
+                });
+            },
             
             initUI() {
                 this.SceneManager.init(this);
                 this.dom.toolButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.setActiveTool(e.target.dataset.tool); }});
                 this.dom.shapeButtons.addEventListener('click', e => { if (e.target.matches('button')) { this.CONFIG.currentShape = e.target.dataset.shape; this.dom.shapeButtons.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); }});
-                this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block'; this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none'; this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex'; this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none'; this.dom.saveBrowserBtn.onclick = () => this.SceneManager.saveToBrowser(); this.dom.loadBrowserBtn.onclick = () => this.SceneManager.loadFromBrowser(); this.dom.shareSceneBtn.onclick = () => this.SceneManager.share(); this.dom.saveFileBtn.onclick = () => this.SceneManager.saveToFile(); this.dom.loadFileInput.onchange = e => { this.SceneManager.loadFromFile(e.target.files[0]); e.target.value = ''; }; this.dom.clearAllBtn.onclick = () => this.clearAll();
+                
+                this.dom.settingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'block';
+                this.dom.closeSettingsBtn.onclick = () => this.dom.settingsPanel.style.display = 'none';
+                this.dom.helpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'flex';
+                this.dom.closeHelpBtn.onclick = () => this.dom.helpPanelOverlay.style.display = 'none';
+                
+                this.dom.saveBrowserBtn.onclick = () => this.SceneManager.saveToBrowser();
+                this.dom.loadBrowserBtn.onclick = () => this.SceneManager.loadFromBrowser();
+                this.dom.shareSceneBtn.onclick = () => this.SceneManager.share();
+                this.dom.saveFileBtn.onclick = () => this.SceneManager.saveToFile();
+                this.dom.loadFileInput.onchange = e => { this.SceneManager.loadFromFile(e.target.files[0]); e.target.value = ''; };
+                this.dom.clearAllBtn.onclick = () => this.clearAll();
                 this.dom.rotationModeSelect.onchange = e => { 
-                    this.CONFIG.rotationMode = e.target.value; 
-                    // When changing mode, update visuals immediately
+                    this.SETTINGS.rotationMode = e.target.value; 
                     this.updateVisualsAndGravity(); 
                 };
-                for(const key in this.dom.sliders) this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key));
+                for(const key in this.dom.sliders) {
+                    if (this.dom.sliders[key]) {
+                        this.dom.sliders[key].addEventListener('input', e => this.handleSliderInput(e, key));
+                    }
+                }
                 this.updateUIFromConfig();
                 this.setActiveTool('add');
             },
@@ -404,17 +495,28 @@
                 }
             },
 
-            updateUIFromConfig() { this.dom.rotationModeSelect.value = this.CONFIG.rotationMode; this.dom.sliders.gravity.value = this.CONFIG.gravityScale; this.dom.values.gravity.textContent = this.CONFIG.gravityScale.toFixed(1); this.dom.sliders.restitution.value = this.CONFIG.restitution; this.dom.values.restitution.textContent = this.CONFIG.restitution.toFixed(2); this.dom.sliders.timescale.value = this.CONFIG.timeScale; this.dom.values.timescale.textContent = this.CONFIG.timeScale.toFixed(1); this.engine.timing.timeScale = this.CONFIG.timeScale; Object.keys(this.CONFIG.friction).forEach(k => { if(this.dom.sliders[`friction_${k}`]) { this.dom.sliders[`friction_${k}`].value = this.CONFIG.friction[k]; this.dom.values[`friction_${k}`].textContent = this.CONFIG.friction[k].toFixed(1); }}); },
+            updateUIFromConfig() {
+                this.dom.rotationModeSelect.value = this.SETTINGS.rotationMode;
+                this.dom.sliders.gravity.value = this.SETTINGS.gravityScale;
+                this.dom.values.gravity.textContent = this.SETTINGS.gravityScale.toFixed(1);
+                this.dom.sliders.restitution.value = this.SETTINGS.restitution;
+                this.dom.values.restitution.textContent = this.SETTINGS.restitution.toFixed(2);
+                this.dom.sliders.timescale.value = this.SETTINGS.timeScale;
+                this.dom.values.timescale.textContent = this.SETTINGS.timeScale.toFixed(1);
+                this.engine.timing.timeScale = this.SETTINGS.timeScale;
+                Object.keys(this.SETTINGS.friction).forEach(k => {
+                    if(this.dom.sliders[`friction_${k}`]) {
+                        this.dom.sliders[`friction_${k}`].value = this.SETTINGS.friction[k];
+                        this.dom.values[`friction_${k}`].textContent = this.SETTINGS.friction[k].toFixed(1);
+                    }
+                });
+            },
 
-            /**
-             * **REWRITTEN**: This function now only syncs the visuals (CSS) and gravity
-             * with the current state of `this.worldAngle`.
-             */
             updateVisualsAndGravity() {
-                this.engine.gravity.x = this.CONFIG.gravityScale * Math.sin(this.worldAngle);
-                this.engine.gravity.y = this.CONFIG.gravityScale * Math.cos(this.worldAngle);
+                this.engine.gravity.x = this.SETTINGS.gravityScale * Math.sin(this.worldAngle);
+                this.engine.gravity.y = this.SETTINGS.gravityScale * Math.cos(this.worldAngle);
 
-                if (this.CONFIG.rotationMode === 'visual') {
+                if (this.SETTINGS.rotationMode === 'visual') {
                     this.dom.physicsContainer.style.transformOrigin = `${this.BOX_CENTER.x}px ${this.BOX_CENTER.y}px`;
                     this.dom.physicsContainer.style.transform = `rotate(${this.worldAngle * (180 / Math.PI)}deg)`;
                 } else {
@@ -423,10 +525,6 @@
                 }
             },
 
-            /**
-             * **NEW**: Handles the actual physical rotation of all bodies in the world.
-             * @param {number} angleChange - The angle to rotate by, in radians.
-             */
             rotateWorld(angleChange) {
                 const sin = Math.sin(angleChange);
                 const cos = Math.cos(angleChange);
@@ -436,21 +534,11 @@
 
                 bodies.forEach(body => {
                     if (body.isStatic) return;
-
                     const relPos = { x: body.position.x - center.x, y: body.position.y - center.y };
-                    const newPos = {
-                        x: center.x + relPos.x * cos - relPos.y * sin,
-                        y: center.y + relPos.x * sin + relPos.y * cos
-                    };
-                    
+                    const newPos = { x: center.x + relPos.x * cos - relPos.y * sin, y: center.y + relPos.x * sin + relPos.y * cos };
                     const oldVel = body.velocity;
-                    const newVel = {
-                        x: oldVel.x * cos - oldVel.y * sin,
-                        y: oldVel.x * sin + oldVel.y * cos
-                    };
-
+                    const newVel = { x: oldVel.x * cos - oldVel.y * sin, y: oldVel.x * sin + oldVel.y * cos };
                     const newAngle = body.angle + angleChange;
-
                     this.Body.setPosition(body, newPos);
                     this.Body.setVelocity(body, newVel);
                     this.Body.setAngle(body, newAngle);
@@ -464,8 +552,10 @@
                 const value = parseFloat(e.target.value);
                 const isFriction = key.startsWith('friction');
                 const prop = isFriction ? key.replace('friction_', '') : (key === 'gravity' ? 'gravityScale' : key);
-                const target = isFriction ? this.CONFIG.friction : this.CONFIG;
+                
+                const target = isFriction ? this.SETTINGS.friction : this.SETTINGS;
                 target[prop] = value;
+
                 this.dom.values[key].textContent = value.toFixed(key === 'restitution' ? 2 : 1);
                 
                 if (key === 'timeScale') {
@@ -481,7 +571,7 @@
                     const bodies = this.Composite.allBodies(this.world);
                     for (const body of bodies) {
                         if (body.isMotor && !body.isStatic) {
-                            this.Body.setAngularVelocity(body, this.CONFIG.motorSpeed);
+                            this.Body.setAngularVelocity(body, this.SETTINGS.motorSpeed);
                         }
                     }
                 });
