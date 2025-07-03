@@ -11,7 +11,7 @@
   "devDependencies": {
     "@types/matter-js": "^0.19.8",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^7.0.1"
   },
   "dependencies": {
     "matter-js": "^0.20.0"
